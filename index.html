@@ -13,12 +13,11 @@
 
           scene.addEventListener('enter-vr', () => {
             if (scene.is('ar-mode')) {
-              // AR: ocultar elementos VR
-              elementosVR.forEach(el => el.setAttribute('visible', false));
+              // AR: eliminar elementos VR del DOM
+              elementosVR.forEach(el => el.parentNode.removeChild(el));
               avatar.setAttribute('visible', false);
             } else {
-              // VR: mostrar entorno tropical
-              elementosVR.forEach(el => el.setAttribute('visible', true));
+              // VR: mostrar avatar en posición fija
               avatar.setAttribute('position', '0 0 -2');
               avatar.setAttribute('visible', true);
             }
@@ -58,7 +57,7 @@
       ></a-entity>
 
       <!-- 🌴 Entorno tropical solo para VR -->
-      <a-sky class="vr-only" color="#87ceeb" visible="false"></a-sky>
+      <a-sky class="vr-only" color="#87ceeb"></a-sky>
 
       <!-- Arena -->
       <a-plane
@@ -68,7 +67,6 @@
         width="100"
         height="100"
         color="#f4e2d8"
-        visible="false"
       ></a-plane>
 
       <!-- Agua -->
@@ -80,24 +78,21 @@
         height="100"
         color="#00bfff"
         opacity="0.6"
-        visible="false"
       ></a-plane>
 
-      <!-- Palmeras (simuladas con cilindros) -->
+      <!-- Palmera simulada -->
       <a-cylinder
         class="vr-only"
         position="3 0 -5"
         radius="0.2"
         height="4"
         color="#8B4513"
-        visible="false"
       ></a-cylinder>
       <a-sphere
         class="vr-only"
         position="3 4 -5"
         radius="1"
         color="#228B22"
-        visible="false"
       ></a-sphere>
 
       <!-- Luces -->
