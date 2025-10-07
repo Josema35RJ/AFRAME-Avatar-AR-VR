@@ -2,79 +2,53 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Avatar en Playa VR + AR</title>
+    <title>VR + AR con A-Frame</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   </head>
   <body>
     <a-scene
-      vr-mode-ui="enabled: true"
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-      renderer="logarithmicDepthBuffer: true;"
-      device-orientation-permission-ui="enabled: true"
+      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+      xr-mode-ui="enabled: true"
+      renderer="colorManagement: true;"
+      environment="preset: forest; ground: flat; groundTexture: none;"
     >
       <!-- Precarga de modelos -->
       <a-assets>
-        <a-asset-item id="avatar" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-        <a-asset-item id="reticleAsset" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/reticle.glb"></a-asset-item>
+        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
       </a-assets>
 
       <!-- Cámara -->
-      <a-camera position="0 1.6 0" look-controls="enabled: true"></a-camera>
+      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Suelo de arena -->
-      <a-plane
-        position="0 0 -4"
-        rotation="-90 0 0"
-        width="50"
-        height="50"
-        color="#F4E2D8"
-      ></a-plane>
-
-      <!-- Mar -->
-      <a-plane
-        position="0 0 -20"
-        rotation="-90 0 0"
-        width="50"
-        height="50"
-        color="#00BFFF"
-        opacity="0.6"
-      ></a-plane>
-
-      <!-- Cascada animada -->
-      <a-box
-        position="0 5 -30"
-        depth="0.1"
-        height="10"
-        width="5"
-        color="#87CEFA"
-        opacity="0.7"
-        animation="property: position; to: 0 0 -30; dur: 3000; dir: alternate; loop: true"
-      ></a-box>
-
-      <!-- Rocas decorativas -->
-      <a-sphere position="-2 0.5 -28" radius="1" color="#555"></a-sphere>
-      <a-sphere position="2 0.5 -28" radius="1.2" color="#444"></a-sphere>
-
-      <!-- Palmeras -->
-      <a-cylinder position="-5 0 -10" radius="0.3" height="4" color="#8B4513"></a-cylinder>
-      <a-sphere position="-5 4 -10" radius="1.5" color="#228B22"></a-sphere>
-
-      <a-cylinder position="5 0 -8" radius="0.3" height="4" color="#8B4513"></a-cylinder>
-      <a-sphere position="5 4 -8" radius="1.5" color="#228B22"></a-sphere>
-
-      <!-- Avatar GLB animado -->
+      <!-- Avatar GLB con animación -->
       <a-entity
-        gltf-model="#avatar"
+        gltf-model="#avatarModel"
         position="0 0 -2"
         scale="1 1 1"
         animation-mixer
       ></a-entity>
 
-      <!-- Luz ambiental y direccional -->
-      <a-light type="ambient" color="#BBB"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="0.8"></a-light>
+      <!-- Entorno de playa para VR -->
+      <a-sky color="#88ccee"></a-sky>
+      <a-plane
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="50"
+        height="50"
+        color="#f4e2d8"
+      ></a-plane>
+      <a-plane
+        position="0 0 -20"
+        rotation="-90 0 0"
+        width="50"
+        height="50"
+        color="#00bfff"
+        opacity="0.5"
+      ></a-plane>
+
+      <!-- Luz -->
+      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
   </body>
 </html>
