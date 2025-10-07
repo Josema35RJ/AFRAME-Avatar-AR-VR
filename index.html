@@ -2,69 +2,38 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Avatar VR + AR</title>
+    <title>Avatar VR + AR con A-Frame</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.1.0/dist/aframe-ar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-image-aframe.prod.js"></script>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #ar-scene, #vr-scene { display: none; }
-    </style>
   </head>
   <body>
-    <!-- Botones para cambiar entre modos -->
-    <button onclick="startVR()">Modo VR</button>
-    <button onclick="startAR()">Modo AR</button>
-
-    <!-- 🌴 VR: Isla tropical -->
-    <a-scene id="vr-scene" vr-mode-ui="enabled: true" embedded>
-      <a-sky color="#88ccee"></a-sky>
-      <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#228B22"></a-plane>
-      <a-ring position="0 0 0" rotation="-90 0 0" radius-inner="25" radius-outer="50" color="#1E90FF"></a-ring>
-
-      <a-entity gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
-                position="0 0 0"
-                scale="1 1 1"
-                animation-mixer></a-entity>
-
-      <a-cylinder position="3 0 3" height="4" radius="0.2" color="#8B4513"></a-cylinder>
-      <a-cone position="3 4 3" radius-bottom="1.5" height="1.5" color="#228B22"></a-cone>
-
-      <a-entity camera look-controls wasd-controls position="0 1.6 5"></a-entity>
-    </a-scene>
-
-    <!-- 📱 AR: Imagen objetivo -->
-    <a-scene id="ar-scene"
-             mindar-image="imageTargetSrc: ./targets.mind;"
-             embedded
-             color-space="sRGB"
-             renderer="colorManagement: true, physicallyCorrectLights"
-             vr-mode-ui="enabled: false"
-             device-orientation-permission-ui="enabled: true">
+    <a-scene
+      xr-mode-ui="enabled: true"
+      renderer="colorManagement: true"
+      environment="preset: forest; ground: flat; groundColor: #228B22"
+      embedded
+    >
+      <!-- Cargar avatar -->
       <a-assets>
         <a-asset-item id="avatar" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
       </a-assets>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-entity gltf-model="#avatar"
-                  position="0 0 0"
-                  scale="0.5 0.5 0.5"
-                  animation-mixer></a-entity>
-      </a-entity>
+      <!-- Avatar -->
+      <a-entity
+        gltf-model="#avatar"
+        position="0 0 0"
+        scale="1 1 1"
+        animation-mixer
+      ></a-entity>
 
-      <a-camera position="0 0 0" look-controls></a-camera>
+      <!-- Cámara -->
+      <a-entity camera position="0 1.6 3" look-controls></a-entity>
+
+      <!-- Luz -->
+      <a-light type="directional" intensity="1" position="0 4 4"></a-light>
+      <a-light type="ambient" intensity="0.5"></a-light>
+
+      <!-- Cielo -->
+      <a-sky color="#88ccee"></a-sky>
     </a-scene>
-
-    <script>
-      function startVR() {
-        document.getElementById('vr-scene').style.display = 'block';
-        document.getElementById('ar-scene').style.display = 'none';
-      }
-
-      function startAR() {
-        document.getElementById('vr-scene').style.display = 'none';
-        document.getElementById('ar-scene').style.display = 'block';
-      }
-    </script>
   </body>
 </html>
