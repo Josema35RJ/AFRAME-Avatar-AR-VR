@@ -40,7 +40,6 @@
       <!-- 🎒 Assets -->
       <a-assets>
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" crossorigin="anonymous"></a-asset-item>
-        <a-asset-item id="palmeraModel" src="https://raw.githubusercontent.com/Josema35RJ/Avatar/main/palmera.glb" crossorigin="anonymous"></a-asset-item>
         <img id="arenaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
         <img id="aguaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
         <img id="cielo360" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" crossorigin="anonymous">
@@ -83,14 +82,6 @@
         opacity="0.5"
         animation="property: material.opacity; from: 0.5; to: 0.7; dir: alternate; dur: 2000; loop: true"
       ></a-plane>
-
-      <!-- 🌴 Palmera 3D -->
-      <a-entity
-        class="vr-only"
-        gltf-model="#palmeraModel"
-        position="5 0 -10"
-        scale="2 2 2"
-      ></a-entity>
 
       <!-- 💡 Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
