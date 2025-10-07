@@ -2,28 +2,84 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Avatar VR + AR</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+    <title>VR + AR con A-Frame</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script>
+      AFRAME.registerComponent('modo-entorno', {
+        init: function () {
+          const scene = this.el;
+          scene.addEventListener('enter-vr', () => {
+            if (!scene.is('ar-mode')) {
+              // VR: Playa tropical
+              scene.setAttribute('environment', {
+                preset: 'default',
+                ground: 'hills',
+                groundColor: '#f4e2d8',
+                skyType: 'gradient',
+                skyColor: '#88ccee',
+                dressing: 'trees',
+                dressingAmount: 20,
+                dressingColor: '#228B22'
+              });
+            } else {
+              // AR: Cámara real
+              scene.setAttribute('environment', 'enabled', false);
+              const sky = document.querySelector('a-sky');
+              if (sky) sky.setAttribute('visible', false);
+              const planes = document.querySelectorAll('.vr-plane');
+              planes.forEach(p => p.setAttribute('visible', false));
+            }
+          });
+        }
+      });
+    </script>
   </head>
-  <body style="margin: 0; overflow: hidden;">
+  <body>
     <a-scene
-      vr-mode-ui="enabled: true"
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-      renderer="logarithmicDepthBuffer: true;"
+      modo-entorno
+      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+      xr-mode-ui="enabled: true"
+      renderer="colorManagement: true;"
     >
-      <!-- Cámara -->
-      <a-camera position="0 1.6 0" look-controls></a-camera>
+      <!-- Precarga de modelos -->
+      <a-assets>
+        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+      </a-assets>
 
-      <!-- Avatar con animación -->
+      <!-- Cámara -->
+      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+
+      <!-- Avatar GLB con animación -->
       <a-entity
-        gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
-        animation-mixer
+        gltf-model="#avatarModel"
         position="0 0 -2"
         scale="1 1 1"
+        animation-mixer
       ></a-entity>
+
+      <!-- Elementos VR (ocultos en AR) -->
+      <a-sky color="#88ccee"></a-sky>
+      <a-plane
+        class="vr-plane"
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="50"
+        height="50"
+        color="#f4e2d8"
+      ></a-plane>
+      <a-plane
+        class="vr-plane"
+        position="0 0 -20"
+        rotation="-90 0 0"
+        width="50"
+        height="50"
+        color="#00bfff"
+        opacity="0.5"
+      ></a-plane>
+
+      <!-- Luz -->
+      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
   </body>
 </html>
