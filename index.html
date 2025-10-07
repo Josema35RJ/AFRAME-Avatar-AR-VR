@@ -2,15 +2,15 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
+    <title>Playa VR + AR con Avatar</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   </head>
   <body>
     <a-scene
-      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+      webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay;"
       xr-mode-ui="enabled: true"
       renderer="colorManagement: true;"
-      environment="preset: forest; ground: flat; groundTexture: none;"
+      environment="preset: default; ground: flat; groundTexture: none;"
     >
       <!-- Precarga de modelos -->
       <a-assets>
@@ -20,7 +20,7 @@
       <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar GLB con animación -->
+      <!-- Avatar GLB animado -->
       <a-entity
         gltf-model="#avatarModel"
         position="0 0 -2"
@@ -46,7 +46,7 @@
         opacity="0.5"
       ></a-plane>
 
-      <!-- Luz -->
+      <!-- Luz ambiental y direccional -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
