@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
     <title>Playa Tropical VR + AR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-water@3.0.0/dist/aframe-water.min.js"></script>
     <script>
       AFRAME.registerComponent('modo-ar-vr', {
         init: function () {
@@ -42,9 +41,11 @@
     >
       <!-- 🎒 Assets -->
       <a-assets>
-        <a-asset-item id="avatarModel" src="https://cdn.aframe.io/test-models/models/glTF/RobotExpressive/RobotExpressive.glb"></a-asset-item>
-        <a-asset-item id="palmeraModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/PalmTree/glTF-Binary/PalmTree.glb"></a-asset-item>
-        <audio id="playaAudio" src="https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav"></audio>
+        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" crossorigin="anonymous"></a-asset-item>
+        <a-asset-item id="palmeraModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/PalmTree/glTF/PalmTree.gltf" crossorigin="anonymous"></a-asset-item>
+        <img id="arenaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
+        <img id="aguaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
+        <img id="cielo360" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" crossorigin="anonymous">
       </a-assets>
 
       <!-- 🎥 Cámara -->
@@ -60,7 +61,7 @@
       ></a-entity>
 
       <!-- 🌅 Cielo panorámico -->
-      <a-sky class="vr-only" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" rotation="0 -130 0"></a-sky>
+      <a-sky class="vr-only" src="#cielo360" rotation="0 -130 0"></a-sky>
 
       <!-- 🏖️ Suelo con textura de arena -->
       <a-plane
@@ -69,18 +70,21 @@
         rotation="-90 0 0"
         width="100"
         height="100"
-        src="https://cdn.aframe.io/a-painter/images/floor.jpg"
+        src="#arenaTextura"
         repeat="50 50"
       ></a-plane>
 
-      <!-- 🌊 Agua animada -->
-      <a-entity
+      <!-- 🌊 Agua simulada con animación -->
+      <a-plane
         class="vr-only"
-        geometry="primitive: plane; width: 100; height: 100"
-        material="shader: water; color: #00bfff; opacity: 0.6"
-        rotation="-90 0 0"
         position="0 0 -20"
-      ></a-entity>
+        rotation="-90 0 0"
+        width="100"
+        height="100"
+        src="#aguaTextura"
+        opacity="0.5"
+        animation="property: material.opacity; from: 0.5; to: 0.7; dir: alternate; dur: 2000; loop: true"
+      ></a-plane>
 
       <!-- 🌴 Palmera 3D -->
       <a-entity
@@ -89,9 +93,6 @@
         position="5 0 -10"
         scale="2 2 2"
       ></a-entity>
-
-      <!-- 🎵 Sonido ambiental -->
-      <a-sound class="vr-only" src="#playaAudio" autoplay="true" loop="true" volume="0.5"></a-sound>
 
       <!-- 💡 Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
