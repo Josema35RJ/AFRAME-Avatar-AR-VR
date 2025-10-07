@@ -4,13 +4,47 @@
     <meta charset="utf-8" />
     <title>VR + AR con A-Frame</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script>
+      AFRAME.registerComponent('colocar-en-hit', {
+        init: function () {
+          const avatar = this.el;
+          const scene = avatar.sceneEl;
+
+          scene.addEventListener('ar-hit-test-select', function (event) {
+            const position = event.detail.position;
+            avatar.setAttribute('position', position);
+            avatar.setAttribute('visible', true);
+          });
+
+          scene.addEventListener('enter-vr', () => {
+            if (scene.is('ar-mode')) {
+              avatar.setAttribute('visible', false);
+              scene.setAttribute('environment', 'enabled', false);
+            } else {
+              avatar.setAttribute('position', '0 0 -2');
+              avatar.setAttribute('visible', true);
+              scene.setAttribute('environment', {
+                preset: 'forest',
+                ground: 'hills',
+                groundColor: '#d2b48c',
+                skyType: 'gradient',
+                skyColor: '#87ceeb',
+                dressing: 'trees',
+                dressingAmount: 30,
+                dressingColor: '#228B22'
+              });
+            }
+          });
+        }
+      });
+    </script>
   </head>
   <body>
     <a-scene
       webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
       xr-mode-ui="enabled: true"
       renderer="colorManagement: true;"
-      environment="preset: forest; ground: flat; groundTexture: none;"
+      environment="preset: forest; ground: hills; groundColor: #d2b48c; skyType: gradient; skyColor: #87ceeb; dressing: trees; dressingAmount: 30; dressingColor: #228B22"
     >
       <!-- Precarga de modelos -->
       <a-assets>
@@ -20,33 +54,16 @@
       <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar GLB con animación -->
+      <!-- Avatar con animación y colocación en AR -->
       <a-entity
         gltf-model="#avatarModel"
-        position="0 0 -2"
         scale="1 1 1"
         animation-mixer
+        colocar-en-hit
+        visible="false"
       ></a-entity>
 
-      <!-- Entorno de playa para VR -->
-      <a-sky color="#88ccee"></a-sky>
-      <a-plane
-        position="0 0 -4"
-        rotation="-90 0 0"
-        width="50"
-        height="50"
-        color="#f4e2d8"
-      ></a-plane>
-      <a-plane
-        position="0 0 -20"
-        rotation="-90 0 0"
-        width="50"
-        height="50"
-        color="#00bfff"
-        opacity="0.5"
-      ></a-plane>
-
-      <!-- Luz -->
+      <!-- Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
