@@ -4,37 +4,21 @@
     <meta charset="utf-8" />
     <title>Playa Tropical VR + AR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-environment-component@1.3.1/dist/aframe-environment-component.min.js"></script>
     <script>
       AFRAME.registerComponent('modo-ar-vr', {
         init: function () {
           const scene = this.el;
           const avatar = document.querySelector('#avatar');
+          const elementosVR = document.querySelectorAll('.vr-only');
 
           scene.addEventListener('enter-vr', () => {
             if (scene.is('ar-mode')) {
-              // AR: ocultar entorno virtual
-              scene.setAttribute('environment', 'enabled', false);
+              // AR: ocultar elementos VR
+              elementosVR.forEach(el => el.setAttribute('visible', false));
               avatar.setAttribute('visible', false);
             } else {
-              // VR: activar entorno tropical personalizado
-              scene.setAttribute('environment', {
-                preset: 'default',
-                ground: 'flat',
-                groundColor: '#f4e2d8',         // Arena clara
-                groundTexture: 'none',
-                skyType: 'gradient',
-                skyColor: '#87ceeb',            // Cielo azul
-                horizonColor: '#00bfff',        // Agua turquesa
-                fog: 0.6,
-                dressing: 'trees',
-                dressingAmount: 40,
-                dressingColor: '#228B22',       // Verde tropical
-                dressingScale: 2,
-                dressingUniformScale: true,
-                lighting: 'distant',
-                shadow: true
-              });
+              // VR: mostrar entorno tropical
+              elementosVR.forEach(el => el.setAttribute('visible', true));
               avatar.setAttribute('position', '0 0 -2');
               avatar.setAttribute('visible', true);
             }
@@ -72,6 +56,49 @@
         animation-mixer
         visible="false"
       ></a-entity>
+
+      <!-- 🌴 Entorno tropical solo para VR -->
+      <a-sky class="vr-only" color="#87ceeb" visible="false"></a-sky>
+
+      <!-- Arena -->
+      <a-plane
+        class="vr-only"
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="100"
+        height="100"
+        color="#f4e2d8"
+        visible="false"
+      ></a-plane>
+
+      <!-- Agua -->
+      <a-plane
+        class="vr-only"
+        position="0 0 -20"
+        rotation="-90 0 0"
+        width="100"
+        height="100"
+        color="#00bfff"
+        opacity="0.6"
+        visible="false"
+      ></a-plane>
+
+      <!-- Palmeras (simuladas con cilindros) -->
+      <a-cylinder
+        class="vr-only"
+        position="3 0 -5"
+        radius="0.2"
+        height="4"
+        color="#8B4513"
+        visible="false"
+      ></a-cylinder>
+      <a-sphere
+        class="vr-only"
+        position="3 4 -5"
+        radius="1"
+        color="#228B22"
+        visible="false"
+      ></a-sphere>
 
       <!-- Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
