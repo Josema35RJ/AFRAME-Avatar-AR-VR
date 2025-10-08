@@ -2,11 +2,12 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Playa Tropical VR + AR</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>VR + AR con retícula y avatar animado</title>
 
-    <!-- ✅ A-Frame estable -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- ✅ A-Frame base -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
 
     <style>
       body { margin: 0; overflow: hidden; }
@@ -16,41 +17,71 @@
       AFRAME.registerComponent('modo-ar-vr', {
         init: function () {
           const sceneEl = this.el;
-          const avatar = document.querySelector('#avatar');
-          const elementosVR = document.querySelectorAll('.vr-only');
+          const avatar = sceneEl.querySelector('#avatar');
+          const reticula = sceneEl.querySelector('#reticula');
+          const vrEls = sceneEl.querySelectorAll('.vr-only');
 
-          // 🔹 Evento: Entrar en modo VR
-          sceneEl.addEventListener('enter-vr', () => {
-            if (sceneEl.xrSession && sceneEl.xrSession.environmentBlendMode === 'alpha-blend') {
-              // Estamos en modo AR
-              elementosVR.forEach(el => el.remove());
-              avatar.setAttribute('visible', false);
-            } else {
-              // Modo VR normal
-              avatar.setAttribute('visible', true);
-              avatar.setAttribute('position', '0 0 -2');
-            }
-          });
+          let placed = false; // control para saber si ya se colocó el avatar
 
-          // 🔹 Evento: Entrar en modo AR
+          // 🔹 Detectar si la sesión actual es AR
+          const isARSession = () => {
+            const session = sceneEl.xrSession ||
+              (sceneEl.renderer && sceneEl.renderer.xr && sceneEl.renderer.xr.getSession && sceneEl.renderer.xr.getSession());
+            if (!session) return false;
+            const blend = session.environmentBlendMode || '';
+            return blend === 'alpha-blend' || blend === 'additive' || sceneEl.is('ar-mode');
+          };
+
+          const updateVrEls = () => {
+            const ar = isARSession();
+            vrEls.forEach(el => el.setAttribute('visible', !ar));
+          };
+
+          sceneEl.addEventListener('enter-vr', () => setTimeout(updateVrEls, 50));
+          sceneEl.addEventListener('exit-vr', () => setTimeout(updateVrEls, 50));
           sceneEl.addEventListener('enter-ar', () => {
-            elementosVR.forEach(el => el.remove());
+            placed = false;
+            reticula.setAttribute('visible', true);
             avatar.setAttribute('visible', false);
+            setTimeout(updateVrEls, 50);
+          });
+          sceneEl.addEventListener('exit-ar', () => {
+            reticula.setAttribute('visible', false);
+            setTimeout(updateVrEls, 50);
           });
 
-          // 🔹 Evento: AR Hit Test (posición tocada en el mundo real)
-          sceneEl.addEventListener('ar-hit-test-select', (event) => {
-            const hitPos = event.detail.position;
-            if (hitPos) {
-              avatar.setAttribute('position', hitPos);
-              avatar.setAttribute('visible', true);
+          // 🔹 Evento: mostrar posición AR hit-test
+          sceneEl.addEventListener('ar-hit-test-achieved', (e) => {
+            if (!placed) reticula.setAttribute('visible', true);
+          });
+
+          sceneEl.addEventListener('ar-hit-test-updated', (e) => {
+            const pos = e.detail.position;
+            if (!placed && pos) {
+              reticula.object3D.position.copy(pos);
             }
           });
 
-          // 🔹 Salir del modo AR
-          sceneEl.addEventListener('exit-ar', () => {
-            avatar.setAttribute('visible', false);
+          // 🔹 Evento: tocar para colocar el avatar
+          sceneEl.addEventListener('click', () => {
+            if (isARSession() && !placed && reticula.getAttribute('visible')) {
+              const pos = reticula.object3D.position;
+              avatar.object3D.position.copy(pos);
+              avatar.setAttribute('visible', true);
+              reticula.setAttribute('visible', false);
+              placed = true;
+            }
           });
+
+          // 🔹 Animación del modelo
+          avatar.addEventListener('model-loaded', () => {
+            setTimeout(() => {
+              const mixer = avatar.components['animation-mixer'];
+              if (mixer && typeof mixer.play === 'function') mixer.play();
+            }, 150);
+          });
+
+          updateVrEls();
         }
       });
     </script>
@@ -59,62 +90,52 @@
   <body>
     <a-scene
       modo-ar-vr
-      renderer="colorManagement: true; physicallyCorrectLights: true;"
-      webxr="optionalFeatures: hit-test, dom-overlay; requiredFeatures: local-floor; overlayElement: document.body;"
-      vr-mode-ui="enabled: true"
+      renderer="colorManagement: true;"
+      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+      xr-mode-ui="enabled: true"
       ar-hit-test
     >
-
       <!-- 🎒 Assets -->
       <a-assets>
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" crossorigin="anonymous"></a-asset-item>
-        <img id="arenaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
-        <img id="aguaTextura" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
-        <img id="cielo360" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" crossorigin="anonymous">
+        <a-asset-item
+          id="avatarModel"
+          src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+          crossorigin="anonymous"
+        ></a-asset-item>
       </a-assets>
 
-      <!-- 🎥 Cámara (sin controles extra en AR) -->
-      <a-entity camera position="0 1.6 0"></a-entity>
+      <!-- 🎥 Cámara -->
+      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
       <!-- 🧍‍♂️ Avatar animado -->
       <a-entity
         id="avatar"
         gltf-model="#avatarModel"
         scale="1 1 1"
+        position="0 0 -2"
         animation-mixer
         visible="false"
       ></a-entity>
 
-      <!-- 🌅 Cielo panorámico -->
-      <a-sky class="vr-only" src="#cielo360" rotation="0 -130 0"></a-sky>
+      <!-- 🌀 Retícula para AR -->
+      <a-entity id="reticula" visible="false">
+        <a-ring
+          color="#00ffae"
+          radius-inner="0.05"
+          radius-outer="0.06"
+          rotation="-90 0 0"
+        ></a-ring>
+      </a-entity>
 
-      <!-- 🏖️ Suelo con textura de arena -->
-      <a-plane
+      <!-- 🌅 Escenario solo VR -->
+      <a-entity
         class="vr-only"
-        position="0 0 -4"
-        rotation="-90 0 0"
-        width="100"
-        height="100"
-        src="#arenaTextura"
-        repeat="50 50"
-      ></a-plane>
+        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22">
+      </a-entity>
 
-      <!-- 🌊 Agua simulada con animación -->
-      <a-plane
-        class="vr-only"
-        position="0 0 -20"
-        rotation="-90 0 0"
-        width="100"
-        height="100"
-        src="#aguaTextura"
-        opacity="0.5"
-        animation="property: material.opacity; from: 0.5; to: 0.7; dir: alternate; dur: 2000; loop: true"
-      ></a-plane>
-
-      <!-- 💡 Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-
+      <!-- 💡 Luces solo VR -->
+      <a-light class="vr-only" type="ambient" color="#ffffff" intensity="0.5"></a-light>
+      <a-light class="vr-only" type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
   </body>
 </html>
