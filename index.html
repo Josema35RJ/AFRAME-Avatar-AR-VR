@@ -1,37 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
+    <title>VR + AR con retícula y avatar animado</title>
+
+    <!-- ✅ A-Frame base -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
+
+    <style>
+      body { margin: 0; overflow: hidden; }
+    </style>
+
+    <script>
+      AFRAME.registerComponent('modo-ar-vr', {
+        init: function () {
+          const sceneEl = this.el;
+          const avatar = sceneEl.querySelector('#avatar');
+          const reticula = sceneEl.querySelector('#reticula');
+          const vrEls = sceneEl.querySelectorAll('.vr-only');
+
+          let placed = false; // control para saber si ya se colocó el avatar
+
+          // 🔹 Detectar si la sesión actual es AR
+          const isARSession = () => {
+            const session = sceneEl.xrSession ||
+              (sceneEl.renderer && sceneEl.renderer.xr && sceneEl.renderer.xr.getSession && sceneEl.renderer.xr.getSession());
+            if (!session) return false;
+            const blend = session.environmentBlendMode || '';
+            return blend === 'alpha-blend' || blend === 'additive' || sceneEl.is('ar-mode');
+          };
+
+          const updateVrEls = () => {
+            const ar = isARSession();
+            vrEls.forEach(el => el.setAttribute('visible', !ar));
+          };
+
+          sceneEl.addEventListener('enter-vr', () => setTimeout(updateVrEls, 50));
+          sceneEl.addEventListener('exit-vr', () => setTimeout(updateVrEls, 50));
+          sceneEl.addEventListener('enter-ar', () => {
+            placed = false;
+            reticula.setAttribute('visible', true);
+            avatar.setAttribute('visible', false);
+            setTimeout(updateVrEls, 50);
+          });
+          sceneEl.addEventListener('exit-ar', () => {
+            reticula.setAttribute('visible', false);
+            setTimeout(updateVrEls, 50);
+          });
+
+          // 🔹 Evento: mostrar posición AR hit-test
+          sceneEl.addEventListener('ar-hit-test-achieved', (e) => {
+            if (!placed) reticula.setAttribute('visible', true);
+          });
+
+          sceneEl.addEventListener('ar-hit-test-updated', (e) => {
+            const pos = e.detail.position;
+            if (!placed && pos) {
+              reticula.object3D.position.copy(pos);
+            }
+          });
+
+          // 🔹 Evento: tocar para colocar el avatar
+          sceneEl.addEventListener('click', () => {
+            if (isARSession() && !placed && reticula.getAttribute('visible')) {
+              const pos = reticula.object3D.position;
+              avatar.object3D.position.copy(pos);
+              avatar.setAttribute('visible', true);
+              reticula.setAttribute('visible', false);
+              placed = true;
+            }
+          });
+
+          // 🔹 Animación del modelo
+          avatar.addEventListener('model-loaded', () => {
+            setTimeout(() => {
+              const mixer = avatar.components['animation-mixer'];
+              if (mixer && typeof mixer.play === 'function') mixer.play();
+            }, 150);
+          });
+
+          updateVrEls();
+        }
+      });
+    </script>
   </head>
+
   <body>
     <a-scene
+      modo-ar-vr
+      renderer="colorManagement: true;"
       webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
       xr-mode-ui="enabled: true"
-      renderer="colorManagement: true;"
-      environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
+      ar-hit-test
     >
-      <!-- Precarga de modelos -->
+      <!-- 🎒 Assets -->
       <a-assets>
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+        <a-asset-item
+          id="avatarModel"
+          src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+          crossorigin="anonymous"
+        ></a-asset-item>
       </a-assets>
 
-      <!-- Cámara -->
+      <!-- 🎥 Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar GLB con animación -->
+      <!-- 🧍‍♂️ Avatar animado -->
       <a-entity
+        id="avatar"
         gltf-model="#avatarModel"
-        position="0 0 -2"
         scale="1 1 1"
+        position="0 0 -2"
         animation-mixer
+        visible="false"
       ></a-entity>
 
-      <!-- Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
+      <!-- 🌀 Retícula para AR -->
+      <a-entity id="reticula" visible="false">
+        <a-ring
+          color="#00ffae"
+          radius-inner="0.05"
+          radius-outer="0.06"
+          rotation="-90 0 0"
+        ></a-ring>
+      </a-entity>
+
+      <!-- 🌅 Escenario solo VR -->
+      <a-entity
+        class="vr-only"
+        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22">
+      </a-entity>
+
+      <!-- 💡 Luces solo VR -->
+      <a-light class="vr-only" type="ambient" color="#ffffff" intensity="0.5"></a-light>
+      <a-light class="vr-only" type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
   </body>
 </html>
