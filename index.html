@@ -1,42 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <title>Playa Tropical VR + AR</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+
+    <!-- ✅ A-Frame estable -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <style>
+      body { margin: 0; overflow: hidden; }
+    </style>
+
     <script>
       AFRAME.registerComponent('modo-ar-vr', {
         init: function () {
-          const scene = this.el;
+          const sceneEl = this.el;
           const avatar = document.querySelector('#avatar');
           const elementosVR = document.querySelectorAll('.vr-only');
 
-          scene.addEventListener('enter-vr', () => {
-            if (scene.is('ar-mode')) {
-              elementosVR.forEach(el => el.parentNode.removeChild(el));
+          // 🔹 Evento: Entrar en modo VR
+          sceneEl.addEventListener('enter-vr', () => {
+            if (sceneEl.xrSession && sceneEl.xrSession.environmentBlendMode === 'alpha-blend') {
+              // Estamos en modo AR
+              elementosVR.forEach(el => el.remove());
               avatar.setAttribute('visible', false);
             } else {
+              // Modo VR normal
+              avatar.setAttribute('visible', true);
               avatar.setAttribute('position', '0 0 -2');
+            }
+          });
+
+          // 🔹 Evento: Entrar en modo AR
+          sceneEl.addEventListener('enter-ar', () => {
+            elementosVR.forEach(el => el.remove());
+            avatar.setAttribute('visible', false);
+          });
+
+          // 🔹 Evento: AR Hit Test (posición tocada en el mundo real)
+          sceneEl.addEventListener('ar-hit-test-select', (event) => {
+            const hitPos = event.detail.position;
+            if (hitPos) {
+              avatar.setAttribute('position', hitPos);
               avatar.setAttribute('visible', true);
             }
           });
 
-          scene.addEventListener('ar-hit-test-select', function (event) {
-            const position = event.detail.position;
-            avatar.setAttribute('position', position);
-            avatar.setAttribute('visible', true);
+          // 🔹 Salir del modo AR
+          sceneEl.addEventListener('exit-ar', () => {
+            avatar.setAttribute('visible', false);
           });
         }
       });
     </script>
   </head>
+
   <body>
     <a-scene
       modo-ar-vr
-      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-      xr-mode-ui="enabled: true"
-      renderer="colorManagement: true;"
+      renderer="colorManagement: true; physicallyCorrectLights: true;"
+      webxr="optionalFeatures: hit-test, dom-overlay; requiredFeatures: local-floor; overlayElement: document.body;"
+      vr-mode-ui="enabled: true"
+      ar-hit-test
     >
+
       <!-- 🎒 Assets -->
       <a-assets>
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" crossorigin="anonymous"></a-asset-item>
@@ -45,8 +73,8 @@
         <img id="cielo360" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" crossorigin="anonymous">
       </a-assets>
 
-      <!-- 🎥 Cámara -->
-      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+      <!-- 🎥 Cámara (sin controles extra en AR) -->
+      <a-entity camera position="0 1.6 0"></a-entity>
 
       <!-- 🧍‍♂️ Avatar animado -->
       <a-entity
@@ -86,6 +114,7 @@
       <!-- 💡 Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
+
     </a-scene>
   </body>
 </html>
