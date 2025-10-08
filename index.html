@@ -40,12 +40,12 @@
       <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar anclado al plano detectado en AR -->
+      <!-- Avatar GLB con animación -->
       <a-entity
         gltf-model="#avatarModel"
+        position="0 0 -2"
         scale="1 1 1"
         animation-mixer
-        xr-hit-test
       ></a-entity>
 
       <!-- Cielo panorámico solo visible en VR -->
