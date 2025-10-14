@@ -1,168 +1,155 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <title>VR + AR Profesional</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 
-    <!-- Componente para ocultar elementos en modo AR -->
-    <script>
-      AFRAME.registerComponent('hide-in-ar', {
-        init: function () {
-          const el = this.el;
-          el.setAttribute('visible', true);
-          this.el.sceneEl.addEventListener('enter-vr', () => {
-            const xrSession = this.el.sceneEl.renderer.xr.getSession();
-            const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-            if (isAR) {
-              el.setAttribute('visible', false);
-            }
-          });
-          this.el.sceneEl.addEventListener('exit-vr', () => {
-            el.setAttribute('visible', true);
-          });
-        }
-      });
+  <!-- Ocultar elementos en AR -->
+  <script>
+    AFRAME.registerComponent('hide-in-ar', {
+      init: function () {
+        const el = this.el;
+        el.setAttribute('visible', true);
+        this.el.sceneEl.addEventListener('enter-vr', () => {
+          const xrSession = this.el.sceneEl.renderer.xr.getSession();
+          const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
+          if (isAR) el.setAttribute('visible', false);
+        });
+        this.el.sceneEl.addEventListener('exit-vr', () => { el.setAttribute('visible', true); });
+      }
+    });
+  </script>
 
-      // Componente AR profesional para colocar avatar en el suelo
-      AFRAME.registerComponent('ar-place-avatar', {
-        schema: {
-          offsetY: { type: 'number', default: 0.01 },
-          scale: { type: 'vec3', default: {x:1, y:1, z:1} },
-          autoScale: { type: 'boolean', default: true }
-        },
-        init: function () {
-          const el = this.el;
-          const scene = el.sceneEl;
-          let placed = false;
-          let lastHit = null;
+  <!-- Componente AR profesional -->
+  <script>
+    AFRAME.registerComponent('ar-place-avatar', {
+      schema: { offsetY: { type: 'number', default: 0.01 }, scale: { type: 'vec3', default: {x:1,y:1,z:1} }, autoScale: { type: 'boolean', default: true } },
+      init: function () {
+        const el = this.el;
+        const scene = el.sceneEl;
+        let placed = false;
+        let lastHit = null;
 
-          // Retícula de previsualización
-          const cursor = document.createElement('a-entity');
-          cursor.setAttribute('geometry', {primitive:'ring', radiusInner:0.05, radiusOuter:0.06});
-          cursor.setAttribute('material', {color:'#00ff88', shader:'flat', opacity:0.7});
-          cursor.setAttribute('rotation','-90 0 0');
-          cursor.setAttribute('visible', false);
-          scene.appendChild(cursor);
+        // Retícula de previsualización
+        const cursor = document.createElement('a-entity');
+        cursor.setAttribute('geometry', {primitive:'ring', radiusInner:0.05, radiusOuter:0.06});
+        cursor.setAttribute('material', {color:'#00ff88', shader:'flat', opacity:0.7});
+        cursor.setAttribute('rotation','-90 0 0');
+        cursor.setAttribute('visible', false);
+        scene.appendChild(cursor);
 
-          // Sombra simple
-          const shadow = document.createElement('a-plane');
-          shadow.setAttribute('rotation','-90 0 0');
-          shadow.setAttribute('material',{color:'#000', opacity:0.3, transparent:true});
-          shadow.setAttribute('scale','0.5 0.5 1');
-          shadow.setAttribute('visible', false);
-          scene.appendChild(shadow);
+        // Sombra realista
+        const shadow = document.createElement('a-plane');
+        shadow.setAttribute('rotation','-90 0 0');
+        shadow.setAttribute('material',{color:'#000', opacity:0.35, transparent:true, shader:'flat'});
+        shadow.setAttribute('scale','0.5 0.5 1');
+        shadow.setAttribute('visible', false);
+        shadow.setAttribute('receive-shadow','true');
+        scene.appendChild(shadow);
 
-          // Hit-test continuo
-          scene.addEventListener('ar-hit-test', (evt) => {
-            if (!scene.is('ar-mode')) return;
-            const position = evt.detail.position;
-            if (!position) {
-              cursor.setAttribute('visible', false);
-              return;
-            }
-            cursor.setAttribute('visible', !placed);
-            cursor.object3D.position.copy(position);
-            lastHit = position.clone();
+        // Hit-test
+        scene.addEventListener('ar-hit-test', (evt) => {
+          if (!scene.is('ar-mode')) return;
+          const position = evt.detail.position;
+          if (!position) { cursor.setAttribute('visible', false); return; }
+          cursor.setAttribute('visible', !placed);
+          cursor.object3D.position.copy(position);
+          lastHit = position.clone();
 
-            if (placed) {
-              const target = lastHit.clone();
-              target.y += this.data.offsetY;
-              el.object3D.position.lerp(target, 0.18);
-              shadow.object3D.position.set(target.x, target.y - this.data.offsetY, target.z);
-              if (this.data.autoScale) adjustScale();
-            }
-          });
-
-          // Colocar avatar al tocar la pantalla
-          scene.addEventListener('ar-hit-test-select', () => {
-            if (!scene.is('ar-mode') || !lastHit) return;
-            const pos = lastHit.clone();
-            pos.y += this.data.offsetY;
-            el.object3D.position.copy(pos);
-            el.object3D.scale.set(this.data.scale.x, this.data.scale.y, this.data.scale.z);
-
-            const camPos = new THREE.Vector3();
-            scene.camera.getWorldPosition(camPos);
-            el.object3D.lookAt(camPos);
-
-            el.setAttribute('visible', true);
-            shadow.setAttribute('visible', true);
-            shadow.object3D.position.set(pos.x, pos.y - this.data.offsetY, pos.z);
-
-            // Animación suave de aparición
-            el.object3D.scale.set(0.01,0.01,0.01);
-            const finalScale = new THREE.Vector3(this.data.scale.x, this.data.scale.y, this.data.scale.z);
-            new TWEEN.Tween(el.object3D.scale).to(finalScale, 500).easing(TWEEN.Easing.Elastic.Out).start();
-
-            placed = true;
-            cursor.setAttribute('visible', false);
-          });
-
-          function adjustScale() {
-            const camPos = scene.camera.getWorldPosition(new THREE.Vector3());
-            const dist = camPos.distanceTo(el.object3D.position);
-            const scale = Math.min(1.2, Math.max(0.6, 1/dist*1.2));
-            el.object3D.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.12);
-            shadow.object3D.scale.set(scale*0.5, scale*0.5, 1);
+          if (placed) {
+            const target = lastHit.clone(); target.y += this.data.offsetY;
+            el.object3D.position.lerp(target, 0.18);
+            shadow.object3D.position.set(target.x, target.y - this.data.offsetY, target.z);
+            if (this.data.autoScale) adjustScale();
           }
+        });
 
-          // Tick para actualizar autoescala
-          this.el.sceneEl.addEventListener('loaded', () => {
-            function tick() {
-              if (placed && el.components['ar-place-avatar'].data.autoScale) adjustScale();
-              requestAnimationFrame(tick);
-            }
-            requestAnimationFrame(tick);
-          });
+        // Colocar / recolocar avatar al tocar
+        scene.addEventListener('ar-hit-test-select', () => {
+          if (!scene.is('ar-mode') || !lastHit) return;
+          const pos = lastHit.clone(); pos.y += this.data.offsetY;
+          el.object3D.position.copy(pos);
+          el.object3D.scale.set(this.data.scale.x,this.data.scale.y,this.data.scale.z);
+
+          const camPos = new THREE.Vector3();
+          scene.camera.getWorldPosition(camPos);
+          el.object3D.lookAt(camPos);
+
+          el.setAttribute('visible', true);
+          shadow.setAttribute('visible', true);
+          shadow.object3D.position.set(pos.x,pos.y - this.data.offsetY,pos.z);
+
+          // Animación suave de aparición
+          el.object3D.scale.set(0.01,0.01,0.01);
+          const finalScale = new THREE.Vector3(this.data.scale.x,this.data.scale.y,this.data.scale.z);
+          new TWEEN.Tween(el.object3D.scale).to(finalScale, 500).easing(TWEEN.Easing.Elastic.Out).start();
+
+          placed = true; cursor.setAttribute('visible', false);
+        });
+
+        function adjustScale() {
+          const camPos = scene.camera.getWorldPosition(new THREE.Vector3());
+          const dist = camPos.distanceTo(el.object3D.position);
+          const scale = Math.min(1.2, Math.max(0.6, 1/dist*1.2));
+          el.object3D.scale.lerp(new THREE.Vector3(scale,scale,scale),0.12);
+          shadow.object3D.scale.set(scale*0.5,scale*0.5,1);
         }
-      });
-    </script>
-  </head>
 
-  <body>
-    <a-scene
-      id="scene"
-      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-      xr-mode-ui="enabled: true"
-      renderer="colorManagement: true;"
-    >
-      <!-- Precarga de modelos -->
-      <a-assets>
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-      </a-assets>
+        // Tick para autoescala
+        this.el.sceneEl.addEventListener('loaded', () => {
+          function tick(){ if(placed && el.components['ar-place-avatar'].data.autoScale) adjustScale(); requestAnimationFrame(tick);}
+          requestAnimationFrame(tick);
+        });
+      }
+    });
+  </script>
+</head>
 
-      <!-- Cámara -->
-      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+<body>
+  <a-scene
+    id="scene"
+    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+    xr-mode-ui="enabled: true"
+    renderer="colorManagement: true;"
+  >
+    <!-- Precarga de modelos -->
+    <a-assets>
+      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+    </a-assets>
 
-      <!-- Avatar GLB con animación y colocación AR -->
-      <a-entity
-        id="avatar"
-        gltf-model="#avatarModel"
-        position="0 0 -2"
-        scale="1 1 1"
-        animation-mixer
-        visible="false"
-        ar-place-avatar
-      ></a-entity>
+    <!-- Cámara -->
+    <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Cielo panorámico solo visible en VR -->
-      <a-sky
-        src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
-        rotation="0 -130 0"
-        hide-in-ar
-      ></a-sky>
+    <!-- Avatar GLB con animación y colocación AR -->
+    <a-entity
+      id="avatar"
+      gltf-model="#avatarModel"
+      position="0 0 -2"
+      scale="1 1 1"
+      animation-mixer
+      visible="false"
+      ar-place-avatar
+    ></a-entity>
 
-      <!-- Entorno virtual solo visible en VR -->
-      <a-entity
-        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
-        hide-in-ar
-      ></a-entity>
+    <!-- Cielo panorámico solo visible en VR -->
+    <a-sky
+      src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
+      rotation="0 -130 0"
+      hide-in-ar
+    ></a-sky>
 
-      <!-- Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-    </a-scene>
-  </body>
+    <!-- Entorno virtual solo visible en VR -->
+    <a-entity
+      environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
+      hide-in-ar
+    ></a-entity>
+
+    <!-- Luces -->
+    <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
+  </a-scene>
+</body>
 </html>
