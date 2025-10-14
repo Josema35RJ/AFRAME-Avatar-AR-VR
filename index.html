@@ -2,12 +2,17 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>VR + AR Funcional</title>
+  <title>VR + AR Profesional MultiDispositivo</title>
+
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 
-  <!-- Ocultar elementos en AR -->
+  <!-- Modelo Viewer para AR iOS -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <!-- Componente hide-in-ar -->
   <script>
     AFRAME.registerComponent('hide-in-ar', {
       init: function () {
@@ -23,7 +28,7 @@
     });
   </script>
 
-  <!-- AR Placement Component -->
+  <!-- Componente AR placement para Android Chrome -->
   <script>
     AFRAME.registerComponent('ar-place-avatar', {
       init: function () {
@@ -109,8 +114,10 @@
       <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
     </a-assets>
 
+    <!-- Cámara -->
     <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
+    <!-- Avatar VR/AR -->
     <a-entity
       id="avatar"
       gltf-model="#avatarModel"
@@ -121,19 +128,42 @@
       ar-place-avatar
     ></a-entity>
 
+    <!-- Fallback AR iOS: model-viewer -->
+    <model-viewer
+      id="iosAvatar"
+      src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+      ar
+      ar-modes="quick-look"
+      camera-controls
+      style="position: fixed; bottom: 0; width: 100%; height: 100%; display: none;"
+    ></model-viewer>
+
+    <!-- Cielo VR -->
     <a-sky
       src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
       rotation="0 -130 0"
       hide-in-ar
     ></a-sky>
 
+    <!-- Entorno VR -->
     <a-entity
       environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
       hide-in-ar
     ></a-entity>
 
+    <!-- Luces -->
     <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
     <a-light type="directional" position="0 5 5" intensity="1"></a-light>
   </a-scene>
+
+  <script>
+    // Detectar iOS y mostrar model-viewer si no hay WebXR AR
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      document.querySelector('a-scene').style.display = 'none';
+      const mv = document.querySelector('#iosAvatar');
+      mv.style.display = 'block';
+    }
+  </script>
 </body>
 </html>
