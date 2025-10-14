@@ -1,361 +1,121 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>A-Frame AR — Production Ready Avatar</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta charset="UTF-8">
+  <title>AR Avatar A-Frame 1.7.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-environment-component@1.3.1/dist/aframe-environment-component.min.js"></script>
 
-  <style>
-    /* UI overlay minimal y usable en móvil */
-    .ui {
-      position: fixed;
-      right: 12px;
-      top: 12px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.45);
-      color: #fff;
-      padding: 10px;
-      border-radius: 10px;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      font-size: 13px;
-      backdrop-filter: blur(6px);
-    }
-    .ui label { display:block; margin:6px 0; cursor:pointer; }
-    .ui .status { font-size:12px; opacity:0.9; margin-top:8px; color:#dcdcdc; }
-    .hint { position: fixed; left:12px; bottom:12px; z-index:9999; background:rgba(0,0,0,0.35); color:#fff; padding:8px 10px; border-radius:8px; font-size:13px; }
-    body { margin:0; height:100vh; }
-  </style>
+  <script>
+    AFRAME.registerComponent('ar-place-avatar', {
+      schema: {
+        offsetY: { type: 'number', default: 0.01 },
+        scale: { type: 'vec3', default: {x:1, y:1, z:1} }
+      },
+
+      init: function () {
+        const el = this.el;
+        const scene = el.sceneEl;
+
+        // Retícula de previsualización
+        const cursor = document.createElement('a-entity');
+        cursor.setAttribute('geometry', {primitive:'ring', radiusInner:0.05, radiusOuter:0.06});
+        cursor.setAttribute('material', {color:'#00ff88', shader:'flat', opacity:0.7});
+        cursor.setAttribute('rotation','-90 0 0');
+        cursor.setAttribute('visible', false);
+        scene.appendChild(cursor);
+
+        // Sombra simple
+        const shadow = document.createElement('a-plane');
+        shadow.setAttribute('rotation','-90 0 0');
+        shadow.setAttribute('material',{color:'#000', opacity:0.3, transparent:true});
+        shadow.setAttribute('scale','0.5 0.5 1');
+        shadow.setAttribute('visible', false);
+        scene.appendChild(shadow);
+
+        let placed = false;
+        let lastHit = null;
+
+        // Hit-test continuo
+        scene.addEventListener('ar-hit-test', (evt) => {
+          if (!scene.is('ar-mode')) return;
+          const position = evt.detail.position;
+          if (!position) {
+            cursor.setAttribute('visible', false);
+            return;
+          }
+          cursor.setAttribute('visible', !placed);
+          cursor.object3D.position.copy(position);
+          lastHit = position.clone();
+
+          // Si avatar ya colocado, sigue suavemente
+          if (placed) {
+            const target = lastHit.clone();
+            target.y += this.data.offsetY;
+            el.object3D.position.lerp(target, 0.2);
+
+            shadow.object3D.position.set(target.x, target.y - this.data.offsetY, target.z);
+          }
+        });
+
+        // Al tocar: colocar avatar
+        scene.addEventListener('ar-hit-test-select', () => {
+          if (!scene.is('ar-mode') || !lastHit) return;
+
+          const pos = lastHit.clone();
+          pos.y += this.data.offsetY;
+          el.object3D.position.copy(pos);
+          el.object3D.scale.set(this.data.scale.x, this.data.scale.y, this.data.scale.z);
+
+          // Mirar a cámara
+          const camPos = new THREE.Vector3();
+          scene.camera.getWorldPosition(camPos);
+          el.object3D.lookAt(camPos);
+
+          el.setAttribute('visible', true);
+          shadow.setAttribute('visible', true);
+          shadow.object3D.position.set(pos.x, pos.y - this.data.offsetY, pos.z);
+
+          placed = true;
+          cursor.setAttribute('visible', false);
+        });
+
+        // Ajustes al entrar en VR
+        scene.addEventListener('enter-vr', () => {
+          if (!scene.is('ar-mode')) {
+            el.setAttribute('visible', true);
+            shadow.setAttribute('visible', false);
+          }
+        });
+      }
+    });
+  </script>
 </head>
+
 <body>
-  <div class="ui" id="ui">
-    <label><input type="checkbox" id="toggleAnchors" checked /> Intentar usar Anchors (si está disponible)</label>
-    <label><input type="checkbox" id="toggleShadows" checked /> Sombras</label>
-    <label><input type="checkbox" id="toggleAutoScale" checked /> Auto-escalar según distancia</label>
-    <label><input type="checkbox" id="toggleReposition" checked /> Permitir recolocar</label>
-    <div class="status" id="status">Inicializando...</div>
-  </div>
-
-  <div class="hint">Entra en AR (botón XR). Apunta al suelo hasta que veas la retícula y toca para colocar.</div>
-
   <a-scene
-    id="scene"
-    background="color: #000000"
-    renderer="colorManagement: true"
-    vr-mode-ui="enabled: false"
-    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor; optionalFeatures: anchors;"
+    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
     xr-mode-ui="enabled: true"
     environment="preset: forest; ground: hills; groundColor: #d2b48c; skyType: gradient; skyColor: #87ceeb; dressing: trees; dressingAmount: 30; dressingColor: #228B22"
   >
     <a-assets>
-      <!-- Reemplaza con tu GLB/GLTF si deseas -->
       <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Cámara normal para VR fallback -->
-    <a-entity id="cameraRig">
-      <a-camera id="camera" position="0 1.6 0" wasd-controls look-controls></a-camera>
+    <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+
+    <a-entity
+      id="avatar"
+      gltf-model="#avatarModel"
+      visible="false"
+      scale="1 1 1"
+      animation-mixer
+      ar-place-avatar="offsetY:0.01; scale:1 1 1">
     </a-entity>
 
-    <!-- Luces dinámicas -->
-    <a-entity light="type: ambient; intensity: 0.6; color: #ffffff"></a-entity>
-    <a-entity id="dirLight" light="type: directional; intensity: 1.0; color: #ffffff" position="0 4 2"></a-entity>
-
-    <!-- Retícula para previsualización -->
-    <a-entity id="cursor" geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.065"
-              material="shader: flat; opacity: 0.9; color: #00ff88"
-              rotation="-90 0 0"
-              visible="false"></a-entity>
-
-    <!-- Sombra (plane) — inicialmente oculta -->
-    <a-entity id="shadow" geometry="primitive: circle; radius: 0.5"
-              material="shader: flat; opacity: 0.35; transparent: true"
-              rotation="-90 0 0"
-              visible="false"></a-entity>
-
-    <!-- Avatar principal -->
-    <a-entity id="avatar"
-              gltf-model="#avatarModel"
-              visible="false"
-              animation-mixer
-              position="0 0 0"
-              scale="1 1 1"></a-entity>
+    <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
   </a-scene>
-
-  <script>
-  (function () {
-    const scene = document.querySelector('#scene');
-    const avatar = document.querySelector('#avatar');
-    const cursor = document.querySelector('#cursor');
-    const shadow = document.querySelector('#shadow');
-    const statusEl = document.querySelector('#status');
-
-    // UI controls
-    const toggleAnchors = document.querySelector('#toggleAnchors');
-    const toggleShadows = document.querySelector('#toggleShadows');
-    const toggleAutoScale = document.querySelector('#toggleAutoScale');
-    const toggleReposition = document.querySelector('#toggleReposition');
-
-    // Parámetros tunables (ajusta a tu gusto)
-    const OFFSET_Y = 0.01;          // centímetros sobre el plano detectado
-    const SMOOTH_POS = 0.18;        // lerp factor (0..1)
-    const SMOOTH_ROT = 0.18;        // slerp factor
-    const MIN_SCALE = 0.4;
-    const MAX_SCALE = 1.4;
-    const SCALE_DISTANCE_MIN = 0.6; // m
-    const SCALE_DISTANCE_MAX = 4.0; // m
-
-    let placed = false;
-    let anchorObj = null; // XRAnchor u objeto placeholder
-    let lastHit = null;
-    let supportsAnchors = false;
-    let xrSession = null;
-
-    // Actualizar estado UI
-    function setStatus(text) { statusEl.textContent = text; }
-
-    // Helpers three.js
-    const tempVec = new THREE.Vector3();
-    const quat = new THREE.Quaternion();
-
-    // Intentar detectar session y soporte anchors cuando se abra XR
-    scene.addEventListener('enter-vr', () => {
-      xrSession = scene.renderer.xr.getSession();
-      supportsAnchors = !!(xrSession && (xrSession.requestAnchor || xrSession.requestHitTestSourceForTransientInput || xrSession.viewerSpace || xrSession.domOverlayState || xrSession.anchorManager || xrSession['features'] && xrSession['features'].includes && xrSession['features'].includes('anchors')));
-      // Nota: la forma exacta de detectar Anchor API varía por implementación; hacemos una comprobación amplia
-      console.log('XR Session:', xrSession, 'Anchors detected (heuristic):', supportsAnchors);
-      setStatus('Entraste en XR. Soporte anchors (heurístico): ' + (supportsAnchors ? 'Sí' : 'No (fallback activado)'));
-    });
-
-    // Escuchar hit-test continuo proporcionado por A-Frame (evento ar-hit-test)
-    scene.addEventListener('ar-hit-test', (evt) => {
-      if (!scene.is('ar-mode')) return;
-      const pos = evt.detail.position;
-      const rot = evt.detail.rotation;
-      if (!pos) {
-        cursor.setAttribute('visible', false);
-        return;
-      }
-      cursor.setAttribute('visible', !placed);
-      // actualizar retícula
-      cursor.object3D.position.copy(pos);
-
-      // rot puede ser un quaternion (AFRame usa THREE.Quaternion para rot en algunos casos)
-      if (rot) {
-        // rot puede venir como THREE.Quaternion o Euler; si no, lo ignoramos
-        try {
-          if (rot instanceof THREE.Quaternion) {
-            cursor.object3D.quaternion.copy(rot);
-          } else if (rot instanceof THREE.Euler) {
-            cursor.object3D.quaternion.setFromEuler(rot);
-          }
-        } catch (e) { /* no crítico */ }
-      }
-
-      lastHit = { position: pos.clone(), rotation: cursor.object3D.quaternion.clone() };
-      // Si ya colocado y queremos que el avatar "siga" el plano (mejor ajuste), actualizar suavemente
-      if (placed && anchorObj === null) {
-        const targetPos = pos.clone().add(new THREE.Vector3(0, OFFSET_Y, 0));
-        avatar.object3D.position.lerp(targetPos, SMOOTH_POS);
-        avatar.object3D.quaternion.slerp(cursor.object3D.quaternion, SMOOTH_ROT);
-        updateShadow();
-        maybeAutoScale();
-      }
-    });
-
-    // Al tocar: colocar o recolocar
-    scene.addEventListener('ar-hit-test-select', async (evt) => {
-      if (!scene.is('ar-mode')) return;
-      if (placed && !toggleReposition.checked) {
-        setStatus('Avatar ya colocado y recolocación desactivada');
-        return;
-      }
-      if (!lastHit) {
-        setStatus('No hay hit disponible al tocar');
-        return;
-      }
-
-      setStatus('Intentando colocar avatar ...');
-
-      const finalPos = lastHit.position.clone().add(new THREE.Vector3(0, OFFSET_Y, 0));
-      avatar.object3D.position.copy(finalPos);
-      avatar.object3D.quaternion.copy(lastHit.rotation);
-      avatar.setAttribute('visible', true);
-
-      // Intento de crear Anchor si el usuario quiere y la sesión lo soporta
-      if (toggleAnchors.checked && xrSession) {
-        try {
-          // Tratamos varias implementaciones:
-          // 1) xrFrame.createAnchor (algunas implementaciones)
-          // 2) session.requestAnchor (no estándar en todas)
-          // 3) session.requestHitTestSource + usar hit result como referencia (fallback)
-          const xrFrame = scene.frame; // A-Frame expone xrFrame en scene.frame
-          const refSpace = scene.renderer.xr.getReferenceSpace();
-
-          if (xrFrame && xrFrame.createAnchor) {
-            // Crear XRRigidTransform desde posición y rotación
-            const transform = new XRRigidTransform(
-              { x: finalPos.x, y: finalPos.y, z: finalPos.z },
-              { x: avatar.object3D.quaternion.x, y: avatar.object3D.quaternion.y, z: avatar.object3D.quaternion.z, w: avatar.object3D.quaternion.w }
-            );
-            anchorObj = await xrFrame.createAnchor(transform, refSpace);
-            setStatus('Anchor creado (xrFrame.createAnchor).');
-            console.log('Anchor creado:', anchorObj);
-          } else if (xrSession.requestAnchor) {
-            // Implementaciones experimentales
-            const transform = new XRRigidTransform(
-              { x: finalPos.x, y: finalPos.y, z: finalPos.z },
-              { x: avatar.object3D.quaternion.x, y: avatar.object3D.quaternion.y, z: avatar.object3D.quaternion.z, w: avatar.object3D.quaternion.w }
-            );
-            anchorObj = await xrSession.requestAnchor(transform, scene.renderer.xr.getReferenceSpace());
-            setStatus('Anchor creado (session.requestAnchor).');
-            console.log('Anchor (session.requestAnchor):', anchorObj);
-          } else {
-            // Fallback: no anchors disponibles, usaremos la posición final y mantendremos smoothing
-            anchorObj = null;
-            setStatus('Anchors no disponibles, usando fallback (posición pegada).');
-          }
-        } catch (err) {
-          console.warn('No se pudo crear anchor:', err);
-          anchorObj = null;
-          setStatus('Error al crear anchor; usando fallback. ' + (err && err.message ? err.message : ''));
-        }
-      } else {
-        setStatus('Anchors desactivados o no hay sesión XR — usando fallback posicional.');
-      }
-
-      // Aparecer con animación de escalado
-      const animatePop = (duration = 380) => {
-        const start = performance.now();
-        const from = 0.02;
-        const to = 1.0;
-        const loop = (t) => {
-          const p = Math.min((t - start) / duration, 1);
-          const s = from + (to - from) * (1 - Math.pow(1 - p, 3)); // easing out cubic
-          avatar.object3D.scale.set(s, s, s);
-          if (p < 1) requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
-      };
-      avatar.object3D.scale.set(0.02, 0.02, 0.02);
-      animatePop();
-
-      // Mostrar sombra si está activada
-      if (toggleShadows.checked) {
-        shadow.setAttribute('visible', true);
-        shadow.object3D.position.set(finalPos.x, finalPos.y - OFFSET_Y, finalPos.z);
-        // Escala de la sombra proporcional a la escala del avatar
-        shadow.object3D.scale.set(0.8, 0.8, 0.8);
-      } else {
-        shadow.setAttribute('visible', false);
-      }
-
-      placed = true;
-      // Si anchorObj se creó, registramos callback de updates (si la API lo ofrece)
-      if (anchorObj && anchorObj.anchorSpace) {
-        setStatus('Avatar fijado con anchor. Debería permanecer estable en el mundo real.');
-        // Algunos runtimes exponen anchor.anchorSpace y xrFrame.getPose para obtener la pose cada frame
-        // Actualizamos desde el loop de requestAnimationFrame más abajo
-      } else {
-        setStatus('Avatar colocado (sin anchor persistente).');
-      }
-    });
-
-    // Animación por frame para aplicar anchor updates y smoothing
-    function tick() {
-      // Si hay un anchorObj con anchorSpace y tenemos xrFrame, intentar actualizar posición desde anchor
-      if (placed && anchorObj && scene.frame && anchorObj.anchorSpace) {
-        try {
-          const pose = scene.frame.getPose(anchorObj.anchorSpace, scene.renderer.xr.getReferenceSpace());
-          if (pose) {
-            const pos = new THREE.Vector3(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-            const rotQ = pose.transform.orientation;
-            const targetQuat = new THREE.Quaternion(rotQ.x, rotQ.y, rotQ.z, rotQ.w);
-            // Lerp y slerp para suavizar
-            const targetPos = pos.clone().add(new THREE.Vector3(0, OFFSET_Y, 0));
-            avatar.object3D.position.lerp(targetPos, SMOOTH_POS);
-            avatar.object3D.quaternion.slerp(targetQuat, SMOOTH_ROT);
-            updateShadow();
-            maybeAutoScale();
-            setStatus('Anchor activo (sync desde anchor).');
-          }
-        } catch (err) {
-          // no crítico, seguir con fallback
-        }
-      }
-
-      // También actualizamos la luz direccional para que parezca coherente con la cámara
-      updateDirectionalLight();
-
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-
-    // Actualizar shadow respecto a avatar
-    function updateShadow() {
-      if (!shadow || !avatar) return;
-      const pos = avatar.object3D.position;
-      shadow.object3D.position.set(pos.x, pos.y - OFFSET_Y, pos.z);
-      // hacer la sombra conforme a la altitud / escala
-      const scaleFactor = Math.min(1.6, Math.max(0.5, avatar.object3D.scale.x * 0.9));
-      shadow.object3D.scale.set(scaleFactor, scaleFactor, scaleFactor);
-      // ajustar opacidad según distancia (más lejos, menos definida)
-      const cam = document.querySelector('#camera').object3D;
-      const dist = cam.position.distanceTo(pos);
-      const newOpacity = Math.max(0.18, Math.min(0.65, 0.65 - (dist - 1.0) * 0.12));
-      shadow.setAttribute('material', 'opacity', newOpacity);
-    }
-
-    // Auto-scale según distancia y control de UI
-    function maybeAutoScale() {
-      if (!toggleAutoScale.checked) return;
-      // distancia cámara-avatar
-      const camPos = document.querySelector('#camera').object3D.getWorldPosition(new THREE.Vector3());
-      const dist = camPos.distanceTo(avatar.object3D.position);
-      // Mapeo lineal entre SCALE_DISTANCE_MIN..MAX a MAX_SCALE..MIN_SCALE (más lejos -> más pequeño)
-      const t = Math.max(0, Math.min(1, (dist - SCALE_DISTANCE_MIN) / (SCALE_DISTANCE_MAX - SCALE_DISTANCE_MIN)));
-      const scale = MAX_SCALE + (MIN_SCALE - MAX_SCALE) * t; // t=0 -> MAX_SCALE; t=1 -> MIN_SCALE
-      // Lerpear la escala para suavizar
-      avatar.object3D.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.12);
-      updateShadow();
-    }
-
-    // Luz direccional sigue ligeramente a la cámara para mantener sombras coherentes
-    function updateDirectionalLight() {
-      const cam = document.querySelector('#camera').object3D;
-      const dirLight = document.querySelector('#dirLight').object3D;
-      // Posición relativa: delante-arriba de la cámara
-      const camWorldPos = new THREE.Vector3();
-      cam.getWorldPosition(camWorldPos);
-      const camForward = new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
-      const lightPos = camWorldPos.clone().add(camForward.clone().multiplyScalar(-1.5)).add(new THREE.Vector3(0,2.4,0));
-      dirLight.position.lerp(lightPos, 0.08);
-    }
-
-    // Manejo de cambios UI en runtime
-    toggleShadows.addEventListener('change', () => {
-      shadow.setAttribute('visible', toggleShadows.checked && placed);
-    });
-    toggleAnchors.addEventListener('change', () => {
-      setStatus('Anchors ' + (toggleAnchors.checked ? 'activados (si soporte)' : 'desactivados'));
-    });
-    toggleAutoScale.addEventListener('change', () => {
-      setStatus('Auto-scale ' + (toggleAutoScale.checked ? 'activado' : 'desactivado'));
-    });
-    toggleReposition.addEventListener('change', () => {
-      setStatus('Recolocación ' + (toggleReposition.checked ? 'permitida' : 'bloqueada'));
-    });
-
-    // Mensajes iniciales y comprobaciones
-    setStatus('Listo — espera a entrar en AR y apunta al suelo');
-    console.log('A-Frame production-ready AR demo loaded.');
-
-    // Para debugging: mostrar eventos XR low-level si lo deseas
-    // scene.addEventListener('enter-vr', () => console.log('enter-vr', scene.is('ar-mode'), scene.renderer.xr.getSession()));
-    // scene.addEventListener('exit-vr', () => console.log('exit-vr'));
-
-  })();
-  </script>
 </body>
 </html>
