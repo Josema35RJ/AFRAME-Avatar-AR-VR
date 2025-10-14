@@ -5,14 +5,14 @@
   <title>VR + AR Profesional Multi-Dispositivo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <!-- A-Frame 1.7.1 -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
-  <!-- Extras -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <!-- aframe-extras 7.6.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.6.0/dist/aframe-extras.min.js"></script>
 
-  <!-- Model Viewer para iOS AR -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <!-- Model Viewer 4.1.0 para iOS AR -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer@4.1.0/dist/model-viewer.min.js"></script>
 
   <style>
     body { margin:0; overflow:hidden; }
@@ -34,6 +34,7 @@
   ar
   ar-modes="quick-look"
   camera-controls
+  auto-rotate
 ></model-viewer>
 
 <!-- A-Frame Scene -->
@@ -46,7 +47,7 @@
   <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
   <!-- Avatar -->
-  <a-entity id="avatar" gltf-model="#avatarModel" scale="1 1 1" animation-mixer position="0 0 -2"></a-entity>
+  <a-entity id="avatar" gltf-model="#avatarModel" scale="0.5 0.5 0.5" animation-mixer rotation="0 180 0" position="0 0 -2" visible="false"></a-entity>
 
   <!-- Sky VR -->
   <a-sky src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"></a-sky>
@@ -60,92 +61,102 @@
 </a-scene>
 
 <script>
-  const sceneEl = document.querySelector('#aframeScene');
-  const avatarEl = document.querySelector('#avatar');
-  const iosAR = document.querySelector('#iosAR');
-  const arMessage = document.querySelector('#arMessage');
+const sceneEl = document.querySelector('#aframeScene');
+const avatarEl = document.querySelector('#avatar');
+const iosAR = document.querySelector('#iosAR');
+const arMessage = document.querySelector('#arMessage');
 
-  // Detectar iOS
-  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // Detectar soporte AR WebXR
-  const checkWebXRAR = async () => {
-    if (navigator.xr) {
+const checkWebXRAR = async () => {
+  if (navigator.xr) {
+    try {
       return await navigator.xr.isSessionSupported('immersive-ar');
+    } catch (e) {
+      console.warn("WebXR AR no soportado", e);
+      return false;
     }
-    return false;
-  };
+  }
+  return false;
+};
 
-  const init = async () => {
-    const webxrAR = await checkWebXRAR();
+sceneEl.addEventListener('loaded', async () => {
+  const webxrAR = await checkWebXRAR();
 
-    if (isiOS) {
-      // iOS → Quick Look
-      sceneEl.style.display = 'none';
-      iosAR.style.display = 'block';
-      arMessage.style.display = 'none';
-    } else if (webxrAR) {
-      // Android Chrome → AR con hit-test
-      iosAR.style.display = 'none';
-      arMessage.style.display = 'none';
-      avatarEl.setAttribute('visible', false);
+  if (isiOS) {
+    // iOS → Quick Look
+    sceneEl.style.display = 'none';
+    iosAR.style.display = 'block';
+    arMessage.style.display = 'none';
+  } else if (webxrAR) {
+    // Android Chrome → AR WebXR
+    iosAR.style.display = 'none';
+    arMessage.style.display = 'none';
+    avatarEl.setAttribute('visible', true);
 
-      // Retícula
-      const cursor = document.createElement('a-entity');
-      cursor.setAttribute('geometry', {primitive:'ring', radiusInner:0.05, radiusOuter:0.06});
-      cursor.setAttribute('material', {color:'#00ff88', shader:'flat', opacity:0.7});
-      cursor.setAttribute('rotation','-90 0 0');
-      cursor.setAttribute('visible', false);
-      sceneEl.appendChild(cursor);
+    // Retícula para colocar si quiere
+    const cursor = document.createElement('a-entity');
+    cursor.setAttribute('geometry', {primitive:'ring', radiusInner:0.05, radiusOuter:0.06});
+    cursor.setAttribute('material', {color:'#00ff88', shader:'flat', opacity:0.7});
+    cursor.setAttribute('rotation','-90 0 0');
+    cursor.setAttribute('visible', false);
+    sceneEl.appendChild(cursor);
 
-      let hitTestSource = null;
-      let localSpace = null;
-      let lastHit = null;
-      let placed = false;
+    let hitTestSource = null;
+    let localSpace = null;
+    let lastHit = null;
+    let placed = false;
 
-      sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
-        const session = sceneEl.renderer.xr.getSession();
-        if (!session) return;
+    sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
+      const session = sceneEl.renderer.xr.getSession();
+      if (!session) return;
 
-        localSpace = await session.requestReferenceSpace('local-floor');
-        const viewerSpace = await session.requestReferenceSpace('viewer');
-        hitTestSource = await session.requestHitTestSource({space: viewerSpace});
+      localSpace = await session.requestReferenceSpace('local-floor');
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      hitTestSource = await session.requestHitTestSource({space: viewerSpace});
 
-        const onXRFrame = (time, frame) => {
-          const viewerPose = frame.getViewerPose(localSpace);
-          if (!viewerPose) return;
+      // Posicionar avatar automáticamente 2 metros frente al usuario
+      const camera = sceneEl.camera.el.object3D;
+      const forward = new THREE.Vector3(0, 0, -2);
+      forward.applyQuaternion(camera.quaternion);
+      avatarEl.object3D.position.copy(camera.position).add(forward);
 
-          const hitResults = frame.getHitTestResults(hitTestSource);
-          if (hitResults.length > 0) {
-            const hitPose = hitResults[0].getPose(localSpace);
-            cursor.object3D.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
-            cursor.setAttribute('visible', !placed);
-            lastHit = hitPose.transform.position;
-          } else {
-            cursor.setAttribute('visible', false);
-          }
-          session.requestAnimationFrame(onXRFrame);
-        };
-        session.requestAnimationFrame(onXRFrame);
+      const onXRFrame = (time, frame) => {
+        const viewerPose = frame.getViewerPose(localSpace);
+        if (!viewerPose) return;
 
-        session.addEventListener('select', () => {
-          if (!lastHit) return;
-          avatarEl.object3D.position.set(lastHit.x, lastHit.y + 0.01, lastHit.z);
-          avatarEl.setAttribute('visible', true);
-          placed = true;
+        const hitResults = frame.getHitTestResults(hitTestSource);
+        if (hitResults.length > 0 && !placed) {
+          const hitPose = hitResults[0].getPose(localSpace);
+          cursor.object3D.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
+          cursor.setAttribute('visible', true);
+          lastHit = hitPose.transform.position;
+        } else {
           cursor.setAttribute('visible', false);
-        });
+        }
+        session.requestAnimationFrame(onXRFrame);
+      };
+      session.requestAnimationFrame(onXRFrame);
+
+      // Recolocar avatar si el usuario toca la pantalla
+      session.addEventListener('select', () => {
+        if (!lastHit) return;
+        avatarEl.object3D.position.copy(cursor.object3D.position);
+        avatarEl.object3D.position.y += 0.01;
+        placed = true;
+        cursor.setAttribute('visible', false);
       });
+    });
 
-    } else {
-      // Otros → fallback VR
-      iosAR.style.display = 'none';
-      arMessage.style.display = 'block';
-      avatarEl.setAttribute('visible', true);
-    }
-  };
-
-  init();
+  } else {
+    // Otros → fallback VR
+    iosAR.style.display = 'none';
+    arMessage.textContent = "AR no soportado. Usando VR.";
+    arMessage.style.display = 'block';
+    avatarEl.setAttribute('visible', true);
+    avatarEl.setAttribute('scale', '1 1 1');
+  }
+});
 </script>
 </body>
 </html>
