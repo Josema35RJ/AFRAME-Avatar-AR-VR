@@ -2,24 +2,80 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
+    <title>VR + AR con A-Frame Mejorado</title>
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component@1.3.1/dist/aframe-environment-component.min.js"></script>
     <script>
       AFRAME.registerComponent('colocar-en-hit', {
+        schema: {
+          offsetY: { type: 'number', default: 0.05 } // pequeño ajuste sobre el suelo
+        },
+
         init: function () {
           const avatar = this.el;
           const scene = avatar.sceneEl;
+          let placing = false;
 
-          scene.addEventListener('ar-hit-test-select', function (event) {
+          // Crear una retícula visual
+          const reticula = document.createElement('a-entity');
+          reticula.setAttribute('geometry', { primitive: 'ring', radiusInner: 0.05, radiusOuter: 0.06 });
+          reticula.setAttribute('material', { color: '#00ff88', shader: 'flat', opacity: 0.7 });
+          reticula.setAttribute('rotation', '-90 0 0');
+          reticula.setAttribute('visible', false);
+          scene.appendChild(reticula);
+
+          let lastHit = new THREE.Vector3();
+
+          // Cuando hay detección continua de hit test (cursor AR)
+          scene.addEventListener('ar-hit-test', function (event) {
+            if (!scene.is('ar-mode')) return;
+
             const position = event.detail.position;
-            avatar.setAttribute('position', position);
-            avatar.setAttribute('visible', true);
+            if (!position) return;
+
+            reticula.setAttribute('visible', true);
+            reticula.object3D.position.copy(position);
+            reticula.object3D.position.y += 0.001; // Evita parpadeo con el suelo
+            lastHit.copy(position);
           });
 
+          // Colocar el avatar en el hit al hacer tap
+          scene.addEventListener('ar-hit-test-select', function () {
+            if (!scene.is('ar-mode') || placing) return;
+
+            placing = true;
+            avatar.setAttribute('visible', true);
+            const pos = lastHit.clone();
+            pos.y += avatar.getAttribute('colocar-en-hit').offsetY;
+            avatar.object3D.position.copy(pos);
+
+            // Hacer que mire al usuario
+            const camPos = scene.camera.el.object3D.position;
+            avatar.object3D.lookAt(camPos);
+
+            // Animación suave de entrada
+            avatar.object3D.scale.set(0.001, 0.001, 0.001);
+            new AFRAME.THREE.Vector3(1, 1, 1).lerp(avatar.object3D.scale, 0.1);
+
+            let scale = 0.001;
+            const grow = () => {
+              if (scale < 1) {
+                scale += 0.05;
+                avatar.object3D.scale.set(scale, scale, scale);
+                requestAnimationFrame(grow);
+              }
+            };
+            grow();
+
+            reticula.setAttribute('visible', false);
+            placing = false;
+          });
+
+          // Configurar entorno VR vs AR
           scene.addEventListener('enter-vr', () => {
             if (scene.is('ar-mode')) {
               avatar.setAttribute('visible', false);
+              reticula.setAttribute('visible', false);
               scene.setAttribute('environment', 'enabled', false);
             } else {
               avatar.setAttribute('position', '0 0 -2');
@@ -55,17 +111,17 @@
       <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar con animación y colocación en AR -->
+      <!-- Avatar -->
       <a-entity
         gltf-model="#avatarModel"
         scale="1 1 1"
         animation-mixer
-        colocar-en-hit
+        colocar-en-hit="offsetY: 0.05"
         visible="false"
       ></a-entity>
 
       <!-- Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+      <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
   </body>
