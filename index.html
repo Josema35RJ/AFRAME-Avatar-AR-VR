@@ -13,7 +13,7 @@
         init: function () {
           const el = this.el;
           el.setAttribute('visible', true);
-          this.el.sceneEl.addEventListener('enter-vr', () => {
+          this.el.sceneEl.addEventListener('realityready', () => { // Mejor detección de AR
             const xrSession = this.el.sceneEl.renderer.xr.getSession();
             const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
             if (isAR) {
@@ -30,68 +30,53 @@
     <!-- Componente para adaptar avatar a AR -->
     <script>
       AFRAME.registerComponent('ar-avatar-adapter', {
+        schema: {
+          initialDistance: {type: 'number', default: 2},
+          avatarHeight: {type: 'number', default: 1.6}
+        },
         init: function () {
-          const sceneEl = this.el.sceneEl;
-          const avatarEl = this.el;
-          
-          this.initialDistance = 2;
-          this.avatarHeight = 1.6;
           this.isAR = false;
-          this.updatePosition = null;
+          this.sceneEl = this.el.sceneEl;
+          this.cameraEl = this.sceneEl.querySelector('a-camera');
           
-          // Detectar entrada en AR
-          sceneEl.addEventListener('enter-vr', () => {
-            const xrSession = sceneEl.renderer.xr.getSession();
-            const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-            
-            if (isAR && !this.isAR) {
-              this.isAR = true;
-              this.setupARTracking();
-              avatarEl.setAttribute('visible', true);
+          this.sceneEl.addEventListener('realityready', () => { // Detección precisa de AR
+            const xrSession = this.sceneEl.renderer.xr.getSession();
+            this.isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
+            if (this.isAR) {
+              this.el.setAttribute('visible', true);
             }
           });
-
-          sceneEl.addEventListener('exit-vr', () => {
-            if (this.isAR) {
-              this.isAR = false;
-              if (this.updatePosition) {
-                sceneEl.removeEventListener('renderstart', this.updatePosition);
-              }
-              avatarEl.setAttribute('position', '0 0 -2');
-            }
+          
+          this.sceneEl.addEventListener('exit-vr', () => {
+            this.isAR = false;
+            this.el.setAttribute('position', '0 0 -2');
           });
         },
-        
-        setupARTracking: function() {
-          const sceneEl = this.el.sceneEl;
-          const cameraEl = sceneEl.querySelector('a-camera');
+        tick: function () {
+          if (!this.isAR) return;
           
-          this.updatePosition = () => {
-            const cameraPos = cameraEl.object3D.position;
-            const cameraRot = cameraEl.object3D.rotation;
-            
-            const distance = this.initialDistance;
-            const angle = cameraRot.y;
-            
-            const x = cameraPos.x + Math.sin(angle) * distance;
-            const z = cameraPos.z + Math.cos(angle) * distance;
-            const y = cameraPos.y - this.avatarHeight;
-            
-            this.el.object3D.position.set(x, y, z);
-            this.el.object3D.lookAt(cameraPos);
-            this.el.object3D.rotateY(Math.PI);
-          };
+          const cameraPos = this.cameraEl.object3D.position;
+          const cameraRot = this.cameraEl.object3D.rotation;
           
-          sceneEl.addEventListener('renderstart', this.updatePosition);
+          const distance = this.data.initialDistance;
+          const angle = cameraRot.y;
+          
+          const x = cameraPos.x + Math.sin(angle) * distance;
+          const z = cameraPos.z + Math.cos(angle) * distance;
+          const y = cameraPos.y - this.data.avatarHeight;
+          
+          this.el.object3D.position.set(x, y, z);
+          this.el.object3D.lookAt(cameraPos);
+          this.el.object3D.rotateY(Math.PI); // Mira hacia la cámara
         }
       });
     </script>
   </head>
   <body>
     <a-scene
-      webxr="optionalFeatures: hit-test, local-floor; requiredFeatures: local-floor;"
+      webxr="optionalFeatures: hit-test, local-floor, bounded-floor; requiredFeatures: local-floor;"
       xr-mode-ui="enabled: true"
-      renderer="colorManagement: true; antialias: true;"
+      renderer="colorManagement: true; antialias: true; shadowMap: true;"
       device-orientation-permission-ui="enabled: true"
     >
       <!-- Precarga de modelos -->
@@ -99,10 +84,11 @@
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
       </a-assets>
       
-      <!-- Cámara optimizada para AR -->
+      <!-- Cámara optimizada -->
       <a-camera 
         position="0 1.6 0" 
         look-controls
+        wasd-controls="enabled: false"  <!-- Desactivado en AR, pero disponible en desktop -->
       ></a-camera>
       
       <!-- Avatar GLB adaptativo -->
@@ -115,9 +101,10 @@
         ar-avatar-adapter
       ></a-entity>
       
-      <!-- Cielo simple de color solo visible en VR (sin imagen externa) -->
+      <!-- Cielo panorámico solo visible en VR -->
       <a-sky
-        color="#87CEEB"
+        src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"
+        rotation="0 -130 0"
         hide-in-ar
       ></a-sky>
       
@@ -127,9 +114,9 @@
         hide-in-ar
       ></a-entity>
       
-      <!-- Luces optimizadas -->
+      <!-- Luces optimizadas con sombras -->
       <a-light type="ambient" color="#404040" intensity="0.4"></a-light>
-      <a-light type="directional" position="1 3 1" intensity="0.8"></a-light>
+      <a-light type="directional" position="1 3 1" intensity="0.8" castShadow="true"></a-light>
     </a-scene>
   </body>
 </html>
