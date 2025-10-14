@@ -14,8 +14,8 @@
     model-viewer { display:none; width:100%; height:100%; position:fixed; top:0; left:0; }
   </style>
 
-  <!-- Componente para ocultar elementos en AR -->
   <script>
+    // Componente para ocultar elementos en AR
     AFRAME.registerComponent('hide-in-ar', {
       init: function () {
         const el = this.el;
@@ -54,7 +54,7 @@
   <a-entity
     id="avatar"
     gltf-model="#avatarModel"
-    position="0 0 -2"
+    position="0 0 -1"   <!-- Ajustado: ~1 metro delante -->
     scale="0.5 0.5 0.5"
     animation-mixer
     visible="false"
@@ -96,7 +96,7 @@ sceneEl.addEventListener('loaded', async () => {
     document.body.appendChild(modelViewer);
     sceneEl.style.display = 'none';
   } else if (webxrAR) {
-    // Android AR → mostrar avatar y retícula
+    // Android AR → retícula y avatar visible
     avatarEl.setAttribute('visible', false);
 
     // Crear retícula
