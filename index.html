@@ -29,61 +29,60 @@
 
     <!-- Componente para adaptar avatar a AR -->
     <script>
-      AFRAME.registerComponent('ar-avatar-adapter', {  // Corregido: era un typo
+      AFRAME.registerComponent('ar-avatar-adapter', {
         init: function () {
           const sceneEl = this.el.sceneEl;
           const avatarEl = this.el;
           
-          // Posición inicial relativa a la cámara
           this.initialDistance = 2;
-          this.avatarHeight = 1.6; // Altura de referencia del avatar
+          this.avatarHeight = 1.6;
+          this.isAR = false;
+          this.updatePosition = null;
           
           // Detectar entrada en AR
           sceneEl.addEventListener('enter-vr', () => {
             const xrSession = sceneEl.renderer.xr.getSession();
             const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
             
-            if (isAR) {
-              // Configurar tracking del avatar
+            if (isAR && !this.isAR) {
+              this.isAR = true;
               this.setupARTracking();
               avatarEl.setAttribute('visible', true);
             }
           });
 
-          // Configurar tracking en AR
-          this.setupARTracking = () => {
-            const cameraEl = sceneEl.querySelector('a-camera');
-            
-            // Función para actualizar posición del avatar
-            const updateAvatarPosition = () => {
-              const cameraPos = cameraEl.getAttribute('position');
-              const cameraRot = cameraEl.getAttribute('rotation');
-              
-              // Calcular posición frente a la cámara
-              const distance = this.initialDistance;
-              const angle = THREE.MathUtils.degToRad(cameraRot.y);
-              
-              const x = cameraPos.x + Math.sin(angle) * distance;
-              const z = cameraPos.z + Math.cos(angle) * distance;
-              const y = cameraPos.y - this.avatarHeight; // Ajustar altura relativa
-              
-              avatarEl.setAttribute('position', `${x} ${y} ${z}`);
-              
-              // Orientar avatar hacia la cámara
-              avatarEl.object3D.lookAt(cameraPos.x, cameraPos.y, cameraPos.z);
-              avatarEl.object3D.rotateY(Math.PI); // Girar 180° para que mire hacia la cámara
-            };
-            
-            // Actualizar cada frame
-            this.el.sceneEl.addEventListener('renderstart', updateAvatarPosition);
-            
-            // Cleanup al salir
-            sceneEl.addEventListener('exit-vr', () => {
-              sceneEl.removeEventListener('renderstart', updateAvatarPosition);
-              // Restaurar posición inicial
+          sceneEl.addEventListener('exit-vr', () => {
+            if (this.isAR) {
+              this.isAR = false;
+              if (this.updatePosition) {
+                sceneEl.removeEventListener('renderstart', this.updatePosition);
+              }
               avatarEl.setAttribute('position', '0 0 -2');
-            });
+            }
+          });
+        },
+        
+        setupARTracking: function() {
+          const sceneEl = this.el.sceneEl;
+          const cameraEl = sceneEl.querySelector('a-camera');
+          
+          this.updatePosition = () => {
+            const cameraPos = cameraEl.object3D.position;
+            const cameraRot = cameraEl.object3D.rotation;
+            
+            const distance = this.initialDistance;
+            const angle = cameraRot.y;
+            
+            const x = cameraPos.x + Math.sin(angle) * distance;
+            const z = cameraPos.z + Math.cos(angle) * distance;
+            const y = cameraPos.y - this.avatarHeight;
+            
+            this.el.object3D.position.set(x, y, z);
+            this.el.object3D.lookAt(cameraPos);
+            this.el.object3D.rotateY(Math.PI);
           };
+          
+          sceneEl.addEventListener('renderstart', this.updatePosition);
         }
       });
     </script>
@@ -103,8 +102,7 @@
       <!-- Cámara optimizada para AR -->
       <a-camera 
         position="0 1.6 0" 
-        look-controls 
-        device-orientation-permission-ui="enabled: true"
+        look-controls
       ></a-camera>
       
       <!-- Avatar GLB adaptativo -->
@@ -119,7 +117,7 @@
       
       <!-- Cielo panorámico solo visible en VR -->
       <a-sky
-        src="ur[](https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
+        src="https://cdn.aframe.io/test-images/ksr-kanagawa.jpg"
         rotation="0 -130 0"
         hide-in-ar
       ></a-sky>
@@ -132,7 +130,7 @@
       
       <!-- Luces optimizadas -->
       <a-light type="ambient" color="#404040" intensity="0.4"></a-light>
-      <a-light type="directional" position="1 3 1" intensity="0.8" castShadow="true"></a-light>
+      <a-light type="directional" position="1 3 1" intensity="0.8"></a-light>
     </a-scene>
   </body>
 </html>
