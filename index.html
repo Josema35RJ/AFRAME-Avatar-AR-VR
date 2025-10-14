@@ -3,158 +3,75 @@
 <head>
   <meta charset="utf-8">
   <title>VR + AR con A-Frame</title>
-
-  <!-- Últimas versiones -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.6.0/dist/aframe-extras.min.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer@4.1.0/dist/model-viewer.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/aframe-ar.js@3.0.0/aframe-ar.js"></script>
   <style>
-    body { margin:0; overflow:hidden; }
-    model-viewer { display:none; width:100%; height:100%; position:fixed; top:0; left:0; }
+    body { margin: 0; overflow: hidden; }
+    model-viewer { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
   </style>
-
-  <script>
-    // Componente para ocultar elementos en AR
-    AFRAME.registerComponent('hide-in-ar', {
-      init: function () {
-        const el = this.el;
-        el.setAttribute('visible', true);
-        this.el.sceneEl.addEventListener('enter-vr', () => {
-          const xrSession = this.el.sceneEl.renderer.xr.getSession();
-          if (xrSession && xrSession.environmentBlendMode === 'alpha-blend') {
-            el.setAttribute('visible', false);
-          }
-        });
-        this.el.sceneEl.addEventListener('exit-vr', () => {
-          el.setAttribute('visible', true);
-        });
-      }
-    });
-  </script>
 </head>
 <body>
 
-<div id="arMessage" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);color:white;padding:10px 20px;font-family:sans-serif;border-radius:8px;z-index:10;">
-  Usa Chrome en Android para AR
-</div>
+  <a-scene
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
+    vr-mode-ui="enabled: true"
+    renderer="colorManagement: true;"
+  >
+    <a-assets>
+      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+    </a-assets>
 
-<a-scene
-  id="aframeScene"
-  webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-  xr-mode-ui="enabled: true"
-  renderer="colorManagement: true;"
->
-  <a-assets>
-    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-  </a-assets>
+    <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-  <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+    <a-entity
+      id="avatar"
+      gltf-model="#avatarModel"
+      position="0 0 -1"
+      scale="0.5 0.5 0.5"
+      animation-mixer
+      visible="false"
+      ar-hit-test="enabled: true"
+    ></a-entity>
 
-  <a-entity
-    id="avatar"
-    gltf-model="#avatarModel"
-    position="0 0 -1"   <!-- Ajustado: ~1 metro delante -->
-    scale="0.5 0.5 0.5"
-    animation-mixer
-    visible="false"
-  ></a-entity>
+    <a-sky src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" rotation="0 -130 0" hide-in-ar></a-sky>
+    <a-entity environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22" hide-in-ar></a-entity>
 
-  <a-sky src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" rotation="0 -130 0" hide-in-ar></a-sky>
-  <a-entity environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22" hide-in-ar></a-entity>
+    <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
+  </a-scene>
 
-  <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-  <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-</a-scene>
+  <script>
+    const avatarEl = document.querySelector('#avatar');
+    const arMessage = document.createElement('div');
+    arMessage.style.position = 'fixed';
+    arMessage.style.top = '20px';
+    arMessage.style.left = '50%';
+    arMessage.style.transform = 'translateX(-50%)';
+    arMessage.style.background = 'rgba(0, 0, 0, 0.6)';
+    arMessage.style.color = 'white';
+    arMessage.style.padding = '10px 20px';
+    arMessage.style.fontFamily = 'sans-serif';
+    arMessage.style.borderRadius = '8px';
+    arMessage.style.zIndex = '10';
+    arMessage.textContent = 'Usa Chrome en Android para AR';
+    document.body.appendChild(arMessage);
 
-<script>
-const sceneEl = document.querySelector('#aframeScene');
-const avatarEl = document.querySelector('#avatar');
-const arMessage = document.getElementById('arMessage');
-const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-const checkWebXRAR = async () => {
-  if (navigator.xr) {
-    try { return await navigator.xr.isSessionSupported('immersive-ar'); }
-    catch { return false; }
-  }
-  return false;
-};
-
-sceneEl.addEventListener('loaded', async () => {
-  const webxrAR = await checkWebXRAR();
-
-  if (isiOS) {
-    // iOS → Quick Look
-    const modelViewer = document.createElement('model-viewer');
-    modelViewer.setAttribute('src','https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb');
-    modelViewer.setAttribute('ar','');
-    modelViewer.setAttribute('ar-modes','quick-look');
-    modelViewer.setAttribute('camera-controls','');
-    modelViewer.setAttribute('auto-rotate','');
-    modelViewer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;';
-    document.body.appendChild(modelViewer);
-    sceneEl.style.display = 'none';
-  } else if (webxrAR) {
-    // Android AR → retícula y avatar visible
-    avatarEl.setAttribute('visible', false);
-
-    // Crear retícula
-    const cursor = document.createElement('a-entity');
-    cursor.setAttribute('geometry', { primitive: 'ring', radiusInner: 0.05, radiusOuter: 0.06 });
-    cursor.setAttribute('material', { color: '#00ff88', shader: 'flat', opacity: 0.7 });
-    cursor.setAttribute('rotation', '-90 0 0');
-    cursor.setAttribute('visible', false);
-    sceneEl.appendChild(cursor);
-
-    let hitTestSource = null;
-    let localSpace = null;
-    let lastHit = null;
-    let placed = false;
-
-    sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
-      const session = sceneEl.renderer.xr.getSession();
-      if (!session) return;
-
-      localSpace = await session.requestReferenceSpace('local-floor');
-      const viewerSpace = await session.requestReferenceSpace('viewer');
-      hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-
-      const onXRFrame = (time, frame) => {
-        const viewerPose = frame.getViewerPose(localSpace);
-        if (!viewerPose) return;
-
-        const hitResults = frame.getHitTestResults(hitTestSource);
-        if (hitResults.length > 0) {
-          const hitPose = hitResults[0].getPose(localSpace);
-          cursor.object3D.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
-          cursor.setAttribute('visible', !placed);
-          lastHit = hitPose.transform.position;
-        } else {
-          cursor.setAttribute('visible', false);
-        }
-        session.requestAnimationFrame(onXRFrame);
-      };
-      session.requestAnimationFrame(onXRFrame);
-
-      // Colocar avatar al tocar pantalla
-      session.addEventListener('select', () => {
-        if (!lastHit) return;
-        avatarEl.object3D.position.set(lastHit.x, lastHit.y + 0.01, lastHit.z);
-        avatarEl.setAttribute('visible', true);
-        placed = true;
-        cursor.setAttribute('visible', false);
-      });
-    });
-
-  } else {
-    // Fallback VR
-    avatarEl.setAttribute('visible', true);
-    avatarEl.setAttribute('scale', '1 1 1');
-    arMessage.style.display = 'block';
-  }
-});
-</script>
+    if (isiOS) {
+      const modelViewer = document.createElement('model-viewer');
+      modelViewer.setAttribute('src', 'https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb');
+      modelViewer.setAttribute('ar', '');
+      modelViewer.setAttribute('ar-modes', 'quick-look');
+      modelViewer.setAttribute('camera-controls', '');
+      modelViewer.setAttribute('auto-rotate', '');
+      modelViewer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+      document.body.appendChild(modelViewer);
+      document.querySelector('a-scene').style.display = 'none';
+    }
+  </script>
 
 </body>
 </html>
