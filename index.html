@@ -68,53 +68,92 @@
 </a-scene>
 
 <script>
-  const sceneEl = document.querySelector('#aframeScene');
-  const avatarEl = document.querySelector('#avatar');
-  const arMessage = document.getElementById('arMessage');
-  const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const sceneEl = document.querySelector('#aframeScene');
+const avatarEl = document.querySelector('#avatar');
+const arMessage = document.getElementById('arMessage');
+const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  const checkWebXRAR = async () => {
-    if (navigator.xr) {
-      try { return await navigator.xr.isSessionSupported('immersive-ar'); } 
-      catch { return false; }
-    }
-    return false;
-  };
+const checkWebXRAR = async () => {
+  if (navigator.xr) {
+    try { return await navigator.xr.isSessionSupported('immersive-ar'); }
+    catch { return false; }
+  }
+  return false;
+};
 
-  sceneEl.addEventListener('loaded', async () => {
-    const webxrAR = await checkWebXRAR();
+sceneEl.addEventListener('loaded', async () => {
+  const webxrAR = await checkWebXRAR();
 
-    if (isiOS) {
-      // iOS → Quick Look
-      const modelViewer = document.createElement('model-viewer');
-      modelViewer.setAttribute('src','https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb');
-      modelViewer.setAttribute('ar','');
-      modelViewer.setAttribute('ar-modes','quick-look');
-      modelViewer.setAttribute('camera-controls','');
-      modelViewer.setAttribute('auto-rotate','');
-      modelViewer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;';
-      document.body.appendChild(modelViewer);
-      sceneEl.style.display = 'none';
-    } else if (webxrAR) {
-      // Android → AR WebXR
-      avatarEl.setAttribute('visible', true);
-      avatarEl.setAttribute('scale', '0.5 0.5 0.5');
+  if (isiOS) {
+    // iOS → Quick Look
+    const modelViewer = document.createElement('model-viewer');
+    modelViewer.setAttribute('src','https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb');
+    modelViewer.setAttribute('ar','');
+    modelViewer.setAttribute('ar-modes','quick-look');
+    modelViewer.setAttribute('camera-controls','');
+    modelViewer.setAttribute('auto-rotate','');
+    modelViewer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;';
+    document.body.appendChild(modelViewer);
+    sceneEl.style.display = 'none';
+  } else if (webxrAR) {
+    // Android AR → mostrar avatar y retícula
+    avatarEl.setAttribute('visible', false);
 
-      sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
-        const session = sceneEl.renderer.xr.getSession();
-        if (!session) return;
-        const camera = sceneEl.camera.el.object3D;
-        const forward = new THREE.Vector3(0,0,-2);
-        forward.applyQuaternion(camera.quaternion);
-        avatarEl.object3D.position.copy(camera.position).add(forward);
+    // Crear retícula
+    const cursor = document.createElement('a-entity');
+    cursor.setAttribute('geometry', { primitive: 'ring', radiusInner: 0.05, radiusOuter: 0.06 });
+    cursor.setAttribute('material', { color: '#00ff88', shader: 'flat', opacity: 0.7 });
+    cursor.setAttribute('rotation', '-90 0 0');
+    cursor.setAttribute('visible', false);
+    sceneEl.appendChild(cursor);
+
+    let hitTestSource = null;
+    let localSpace = null;
+    let lastHit = null;
+    let placed = false;
+
+    sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
+      const session = sceneEl.renderer.xr.getSession();
+      if (!session) return;
+
+      localSpace = await session.requestReferenceSpace('local-floor');
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+
+      const onXRFrame = (time, frame) => {
+        const viewerPose = frame.getViewerPose(localSpace);
+        if (!viewerPose) return;
+
+        const hitResults = frame.getHitTestResults(hitTestSource);
+        if (hitResults.length > 0) {
+          const hitPose = hitResults[0].getPose(localSpace);
+          cursor.object3D.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
+          cursor.setAttribute('visible', !placed);
+          lastHit = hitPose.transform.position;
+        } else {
+          cursor.setAttribute('visible', false);
+        }
+        session.requestAnimationFrame(onXRFrame);
+      };
+      session.requestAnimationFrame(onXRFrame);
+
+      // Colocar avatar al tocar pantalla
+      session.addEventListener('select', () => {
+        if (!lastHit) return;
+        avatarEl.object3D.position.set(lastHit.x, lastHit.y + 0.01, lastHit.z);
+        avatarEl.setAttribute('visible', true);
+        placed = true;
+        cursor.setAttribute('visible', false);
       });
-    } else {
-      // Fallback VR
-      avatarEl.setAttribute('visible', true);
-      avatarEl.setAttribute('scale', '1 1 1');
-      arMessage.style.display = 'block';
-    }
-  });
+    });
+
+  } else {
+    // Fallback VR
+    avatarEl.setAttribute('visible', true);
+    avatarEl.setAttribute('scale', '1 1 1');
+    arMessage.style.display = 'block';
+  }
+});
 </script>
 
 </body>
