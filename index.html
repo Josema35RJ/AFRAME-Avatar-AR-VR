@@ -2,11 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
+    <title>VR + AR con A-Frame 1.7.0</title>
+    <!-- A-Frame 1.7.0 -->
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    <!-- Ocultar elementos en AR -->
+    <!-- Componente para ocultar elementos en AR -->
     <script>
       AFRAME.registerComponent('hide-in-ar', {
         init: function () {
@@ -88,12 +89,10 @@
       renderer="colorManagement: true;"
       xr-mode-ui="enabled: true"
     >
-      <!-- Precarga de modelos -->
       <a-assets>
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
       </a-assets>
 
-      <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
       <!-- Avatar que se adapta en AR -->
@@ -105,20 +104,17 @@
         visible="false"
       ></a-entity>
 
-      <!-- Cielo panorámico (solo VR) -->
       <a-sky
         src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
         rotation="0 -130 0"
         hide-in-ar
       ></a-sky>
 
-      <!-- Entorno virtual (solo VR) -->
       <a-entity
         environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
         hide-in-ar
       ></a-entity>
 
-      <!-- Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
