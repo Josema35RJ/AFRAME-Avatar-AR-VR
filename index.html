@@ -26,7 +26,7 @@
       });
     </script>
 
-    <!-- Componente para colocar y recolocar avatar en AR -->
+    <!-- Componente para colocar y recolocar avatar en AR con distancia mínima -->
     <script>
       AFRAME.registerComponent('ar-hit-test', {
         init: function () {
@@ -34,8 +34,8 @@
           let hitTestSource = null;
           let localSpace = null;
           let placed = false;
+          const minDistance = 1.5; // distancia mínima en metros desde la cámara
 
-          // Cuando se inicia la sesión AR
           this.el.sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
             const session = this.el.sceneEl.renderer.xr.getSession();
             if (!session) return;
@@ -43,30 +43,42 @@
             const viewerSpace = await session.requestReferenceSpace('viewer');
             hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
             localSpace = await session.requestReferenceSpace('local');
+
             el.setAttribute('visible', false); // oculto hasta colocar
           });
 
-          // Cuando se cierra la sesión AR
           this.el.sceneEl.renderer.xr.addEventListener('sessionend', () => {
             hitTestSource = null;
             localSpace = null;
             placed = false;
           });
 
-          // Cada frame, colocamos el avatar si hay hit-test
           this.el.sceneEl.addEventListener('frame', (evt) => {
             const xrFrame = this.el.sceneEl.frame;
             if (!hitTestSource || !xrFrame) return;
+
             const hitTestResults = xrFrame.getHitTestResults(hitTestSource);
             if (hitTestResults.length > 0) {
               const hit = hitTestResults[0];
               const pose = hit.getPose(localSpace);
 
-              // Colocamos el avatar
+              // Calculamos distancia mínima desde la cámara
+              const cameraPos = this.el.sceneEl.camera.el.object3D.position;
+              let dx = pose.transform.position.x - cameraPos.x;
+              let dz = pose.transform.position.z - cameraPos.z;
+              let distance = Math.sqrt(dx * dx + dz * dz);
+
+              if (distance < minDistance) {
+                const factor = minDistance / distance;
+                dx *= factor;
+                dz *= factor;
+              }
+
+              // Colocamos el avatar sobre el plano con offset
               el.object3D.position.set(
-                pose.transform.position.x,
-                pose.transform.position.y,
-                pose.transform.position.z
+                cameraPos.x + dx,
+                pose.transform.position.y + 0.05, // un poquito elevado
+                cameraPos.z + dz
               );
               el.object3D.quaternion.set(
                 pose.transform.orientation.x,
@@ -85,6 +97,7 @@
       });
     </script>
   </head>
+
   <body>
     <a-scene
       webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
