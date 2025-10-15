@@ -25,53 +25,56 @@
       });
     </script>
 
-    <!-- Hit-test automático para AR -->
+    <!-- Componente personalizado para hit-test del avatar -->
     <script>
-      AFRAME.registerComponent('ar-hit-test', {
+      AFRAME.registerComponent('avatar-ar-place', {
         init: function () {
-          const el = this.el;
-          const sceneEl = el.sceneEl;
-
+          this.el.object3D.visible = false; // oculto al inicio
           this.viewerSpace = null;
           this.refSpace = null;
           this.hitTestSource = null;
 
-          sceneEl.renderer.xr.addEventListener('sessionstart', (e) => {
+          const sceneEl = this.el.sceneEl;
+
+          sceneEl.renderer.xr.addEventListener('sessionstart', () => {
             const session = sceneEl.renderer.xr.getSession();
 
-            if (session.requestReferenceSpace && session.requestHitTestSource) {
-              session.requestReferenceSpace('viewer').then((space) => {
-                this.viewerSpace = space;
-                session.requestHitTestSource({ space: this.viewerSpace }).then((source) => {
-                  this.hitTestSource = source;
-                });
-              });
+            if (!session) return;
 
-              session.requestReferenceSpace('local').then((space) => {
-                this.refSpace = space;
+            // Hit test viewer y referencia local
+            session.requestReferenceSpace('viewer').then((space) => {
+              this.viewerSpace = space;
+              session.requestHitTestSource({ space: this.viewerSpace }).then((source) => {
+                this.hitTestSource = source;
               });
+            });
 
-              session.addEventListener('end', () => {
-                this.viewerSpace = null;
-                this.refSpace = null;
-                this.hitTestSource = null;
-              });
-            }
+            session.requestReferenceSpace('local').then((space) => {
+              this.refSpace = space;
+            });
+
+            session.addEventListener('end', () => {
+              this.viewerSpace = null;
+              this.refSpace = null;
+              this.hitTestSource = null;
+              this.el.object3D.visible = false;
+            });
           });
         },
+
         tick: function (time, frame) {
-          const xrFrame = frame;
-          const el = this.el;
-          const session = this.el.sceneEl.renderer.xr.getSession();
+          if (!frame || !this.hitTestSource || !this.refSpace) return;
 
-          if (!xrFrame || !this.hitTestSource || !this.refSpace) return;
-
-          const hitTestResults = xrFrame.getHitTestResults(this.hitTestSource);
-          if (hitTestResults.length > 0) {
-            const pose = hitTestResults[0].getPose(this.refSpace);
-            el.object3D.visible = true;
-            el.object3D.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-            el.object3D.quaternion.set(
+          const hitResults = frame.getHitTestResults(this.hitTestSource);
+          if (hitResults.length > 0) {
+            const pose = hitResults[0].getPose(this.refSpace);
+            this.el.object3D.visible = true;
+            this.el.object3D.position.set(
+              pose.transform.position.x,
+              pose.transform.position.y,
+              pose.transform.position.z
+            );
+            this.el.object3D.quaternion.set(
               pose.transform.orientation.x,
               pose.transform.orientation.y,
               pose.transform.orientation.z,
@@ -89,32 +92,36 @@
       renderer="colorManagement: true;"
       xr-mode-ui="enabled: true"
     >
+      <!-- Precarga de modelo -->
       <a-assets>
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
       </a-assets>
 
+      <!-- Cámara -->
       <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Avatar que se adapta en AR -->
+      <!-- Avatar dinámico en AR -->
       <a-entity
         gltf-model="#avatarModel"
         scale="1 1 1"
         animation-mixer
-        ar-hit-test
-        visible="false"
+        avatar-ar-place
       ></a-entity>
 
+      <!-- Cielo VR solo visible en VR -->
       <a-sky
         src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
         rotation="0 -130 0"
         hide-in-ar
       ></a-sky>
 
+      <!-- Entorno VR solo visible en VR -->
       <a-entity
         environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
         hide-in-ar
       ></a-entity>
 
+      <!-- Luces -->
       <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
       <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
