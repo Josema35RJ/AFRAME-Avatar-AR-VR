@@ -1,143 +1,180 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <title>VR + AR con A-Frame</title>
 
-    <!-- Componente para ocultar elementos en modo AR -->
-    <script>
-      AFRAME.registerComponent('hide-in-ar', {
-        init: function () {
-          const el = this.el;
-          el.setAttribute('visible', true); // visible por defecto
-          this.el.sceneEl.addEventListener('enter-vr', () => {
-            const xrSession = this.el.sceneEl.renderer.xr.getSession();
-            const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-            if (isAR) {
-              el.setAttribute('visible', false);
+  <!-- A-Frame 1.7.0 -->
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+
+  <!-- Componente para ocultar elementos en modo AR -->
+  <script>
+    AFRAME.registerComponent('hide-in-ar', {
+      init: function () {
+        const el = this.el;
+        el.setAttribute('visible', true); // visible por defecto
+        this.el.sceneEl.addEventListener('enter-vr', () => {
+          const xrSession = this.el.sceneEl.renderer.xr.getSession();
+          const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
+          if (isAR) {
+            el.setAttribute('visible', false);
+          }
+        });
+        this.el.sceneEl.addEventListener('exit-vr', () => {
+          el.setAttribute('visible', true);
+        });
+      }
+    });
+  </script>
+
+  <!-- Componente AR hit-test con distancia mínima y fade-in -->
+  <script>
+    AFRAME.registerComponent('ar-hit-test', {
+      schema: {
+        minDistance: {type: 'number', default: 1.5},
+        fadeDuration: {type: 'number', default: 1000} // ms
+      },
+      init: function () {
+        const el = this.el;
+        let hitTestSource = null;
+        let localSpace = null;
+        let placed = false;
+
+        // Inicializamos opacidad a 0 para fade-in
+        el.object3D.traverse(function (child) {
+          if (child.material) child.material.transparent = true;
+          if (child.material) child.material.opacity = 0;
+        });
+
+        this.el.sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
+          const session = this.el.sceneEl.renderer.xr.getSession();
+          if (!session) return;
+
+          const viewerSpace = await session.requestReferenceSpace('viewer');
+          hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+          localSpace = await session.requestReferenceSpace('local');
+
+          el.setAttribute('visible', false); // oculto hasta colocarse
+        });
+
+        this.el.sceneEl.renderer.xr.addEventListener('sessionend', () => {
+          hitTestSource = null;
+          localSpace = null;
+          placed = false;
+        });
+
+        this.el.sceneEl.addEventListener('frame', () => {
+          const xrFrame = this.el.sceneEl.frame;
+          if (!hitTestSource || !xrFrame) return;
+
+          const hitTestResults = xrFrame.getHitTestResults(hitTestSource);
+          if (hitTestResults.length > 0) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(localSpace);
+
+            // Calculamos distancia mínima desde la cámara
+            const cameraPos = this.el.sceneEl.camera.el.object3D.position;
+            let dx = pose.transform.position.x - cameraPos.x;
+            let dz = pose.transform.position.z - cameraPos.z;
+            let distance = Math.sqrt(dx*dx + dz*dz);
+
+            if (distance < this.data.minDistance) {
+              const factor = this.data.minDistance / distance;
+              dx *= factor;
+              dz *= factor;
             }
-          });
-          this.el.sceneEl.addEventListener('exit-vr', () => {
-            el.setAttribute('visible', true);
-          });
-        }
-      });
-    </script>
 
-    <!-- Componente para colocar y recolocar avatar en AR con distancia mínima -->
-    <script>
-      AFRAME.registerComponent('ar-hit-test', {
-        init: function () {
-          const el = this.el;
-          let hitTestSource = null;
-          let localSpace = null;
-          let placed = false;
-          const minDistance = 1.5; // distancia mínima en metros desde la cámara
+            // Posicionamos el avatar sobre el plano
+            el.object3D.position.set(
+              cameraPos.x + dx,
+              pose.transform.position.y + 0.05, // un poquito elevado
+              cameraPos.z + dz
+            );
 
-          this.el.sceneEl.renderer.xr.addEventListener('sessionstart', async () => {
-            const session = this.el.sceneEl.renderer.xr.getSession();
-            if (!session) return;
+            // Ajustamos la rotación
+            el.object3D.quaternion.set(
+              pose.transform.orientation.x,
+              pose.transform.orientation.y,
+              pose.transform.orientation.z,
+              pose.transform.orientation.w
+            );
 
-            const viewerSpace = await session.requestReferenceSpace('viewer');
-            hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-            localSpace = await session.requestReferenceSpace('local');
-
-            el.setAttribute('visible', false); // oculto hasta colocar
-          });
-
-          this.el.sceneEl.renderer.xr.addEventListener('sessionend', () => {
-            hitTestSource = null;
-            localSpace = null;
-            placed = false;
-          });
-
-          this.el.sceneEl.addEventListener('frame', (evt) => {
-            const xrFrame = this.el.sceneEl.frame;
-            if (!hitTestSource || !xrFrame) return;
-
-            const hitTestResults = xrFrame.getHitTestResults(hitTestSource);
-            if (hitTestResults.length > 0) {
-              const hit = hitTestResults[0];
-              const pose = hit.getPose(localSpace);
-
-              // Calculamos distancia mínima desde la cámara
-              const cameraPos = this.el.sceneEl.camera.el.object3D.position;
-              let dx = pose.transform.position.x - cameraPos.x;
-              let dz = pose.transform.position.z - cameraPos.z;
-              let distance = Math.sqrt(dx * dx + dz * dz);
-
-              if (distance < minDistance) {
-                const factor = minDistance / distance;
-                dx *= factor;
-                dz *= factor;
-              }
-
-              // Colocamos el avatar sobre el plano con offset
-              el.object3D.position.set(
-                cameraPos.x + dx,
-                pose.transform.position.y + 0.05, // un poquito elevado
-                cameraPos.z + dz
-              );
-              el.object3D.quaternion.set(
-                pose.transform.orientation.x,
-                pose.transform.orientation.y,
-                pose.transform.orientation.z,
-                pose.transform.orientation.w
-              );
-
-              if (!placed) {
-                el.setAttribute('visible', true); // mostramos al colocarse
-                placed = true;
-              }
+            // Fade-in al colocarse
+            if (!placed) {
+              el.setAttribute('visible', true);
+              el.object3D.traverse((child) => {
+                if (child.material) {
+                  new TWEEN.Tween({opacity: 0})
+                    .to({opacity: 1}, this.data.fadeDuration)
+                    .onUpdate(function() { child.material.opacity = this.opacity; })
+                    .start();
+                }
+              });
+              placed = true;
             }
-          });
-        }
-      });
-    </script>
-  </head>
+          }
+        });
+      }
+    });
+  </script>
 
-  <body>
-    <a-scene
-      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-      xr-mode-ui="enabled: true"
-      renderer="colorManagement: true;"
-      arjs="sourceType: webcam;"
-    >
-      <!-- Precarga de modelos -->
-      <a-assets>
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-      </a-assets>
+  <!-- Librería TWEEN para animaciones -->
+  <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.6.4/dist/tween.umd.js"></script>
 
-      <!-- Cámara -->
-      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+</head>
 
-      <!-- Avatar GLB con animación y AR hit-test -->
-      <a-entity
-        id="avatar"
-        gltf-model="#avatarModel"
-        scale="1 1 1"
-        animation-mixer
-        ar-hit-test
-      ></a-entity>
+<body>
+  <a-scene
+    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+    xr-mode-ui="enabled: true"
+    renderer="colorManagement: true;"
+    arjs="sourceType: webcam;"
+  >
+    <!-- Precarga de modelos -->
+    <a-assets>
+      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+    </a-assets>
 
-      <!-- Cielo panorámico solo visible en VR -->
-      <a-sky
-        src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
-        rotation="0 -130 0"
-        hide-in-ar
-      ></a-sky>
+    <!-- Cámara -->
+    <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
 
-      <!-- Entorno virtual solo visible en VR -->
-      <a-entity
-        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
-        hide-in-ar
-      ></a-entity>
+    <!-- Avatar GLB con animación y AR hit-test -->
+    <a-entity
+      id="avatar"
+      gltf-model="#avatarModel"
+      scale="1 1 1"
+      animation-mixer
+      ar-hit-test
+    ></a-entity>
 
-      <!-- Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-    </a-scene>
-  </body>
+    <!-- Cielo panorámico solo visible en VR -->
+    <a-sky
+      src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
+      rotation="0 -130 0"
+      hide-in-ar
+    ></a-sky>
+
+    <!-- Entorno virtual solo visible en VR -->
+    <a-entity
+      environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
+      hide-in-ar
+    ></a-entity>
+
+    <!-- Luces -->
+    <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
+  </a-scene>
+
+  <!-- Actualizamos TWEEN cada frame -->
+  <script>
+    AFRAME.registerSystem('tween-system', {
+      init: function() {
+        this.el.sceneEl.addEventListener('renderstart', () => {
+          this.el.sceneEl.addBehavior(() => TWEEN.update());
+        });
+      }
+    });
+  </script>
+</body>
 </html>
