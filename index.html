@@ -1,106 +1,141 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>VR + AR con A-Frame</title>
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <head>
+    <meta charset="utf-8" />
+    <title>VR + AR con Hit Test y Toque</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <script>
-    // Componente para ocultar elementos solo en AR
-    AFRAME.registerComponent('hide-in-ar', {
-      init: function () {
-        const el = this.el;
-        el.setAttribute('visible', true);
-        this.el.sceneEl.addEventListener('enter-vr', () => {
-          const xrSession = this.el.sceneEl.renderer.xr.getSession();
-          const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-          el.setAttribute('visible', !isAR);
-        });
-        this.el.sceneEl.addEventListener('exit-vr', () => {
-          el.setAttribute('visible', true);
-        });
-      }
-    });
+    <!-- A-Frame y extras -->
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    // Componente para colocar avatar dinámicamente en AR con hit-test
-    AFRAME.registerComponent('ar-hit-avatar', {
-      init: async function () {
-        const el = this.el;
-        el.setAttribute('visible', false); // inicialmente oculto
+    <!-- Ocultar elementos en modo AR -->
+    <script>
+      AFRAME.registerComponent('hide-in-ar', {
+        init: function () {
+          const el = this.el;
+          const scene = el.sceneEl;
+          scene.addEventListener('enter-vr', () => {
+            const xrSession = scene.renderer.xr.getSession();
+            const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
+            el.setAttribute('visible', !isAR);
+          });
+          scene.addEventListener('exit-vr', () => el.setAttribute('visible', true));
+        }
+      });
+    </script>
 
-        const scene = this.el.sceneEl;
-        scene.addEventListener('enter-vr', async () => {
-          const session = scene.renderer.xr.getSession();
-          if (!session || session.environmentBlendMode !== 'alpha-blend') return;
+    <!-- Hit test + recolocar tocando -->
+    <script>
+      AFRAME.registerComponent('ar-hit-placement', {
+        init: function () {
+          const el = this.el;
+          const scene = el.sceneEl;
+          let xrHitTestSource = null;
+          let viewerSpace = null;
+          let refSpace = null;
+          let hitPose = null;
 
-          // Referencias para hit-test
-          const viewerSpace = await session.requestReferenceSpace('viewer');
-          const referenceSpace = await session.requestReferenceSpace('local-floor');
-          const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+          scene.addEventListener('enter-vr', () => {
+            const session = scene.renderer.xr.getSession();
+            const isAR = session && session.environmentBlendMode === 'alpha-blend';
+            if (!isAR) return;
 
-          // Escucha frames de AR
-          const onXRFrame = (time, frame) => {
-            session.requestAnimationFrame(onXRFrame);
+            session.requestReferenceSpace('viewer').then((space) => {
+              viewerSpace = space;
+              session.requestHitTestSource({ space: viewerSpace }).then((source) => {
+                xrHitTestSource = source;
+              });
+            });
 
-            const hitResults = frame.getHitTestResults(hitTestSource);
-            if (hitResults.length > 0) {
-              const hit = hitResults[0];
-              const pose = hit.getPose(referenceSpace);
-              el.object3D.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-              el.object3D.quaternion.set(
-                pose.transform.orientation.x,
-                pose.transform.orientation.y,
-                pose.transform.orientation.z,
-                pose.transform.orientation.w
+            session.requestReferenceSpace('local').then((space) => {
+              refSpace = space;
+            });
+
+            // Colocar en el punto tocado
+            session.addEventListener('select', () => {
+              if (hitPose) {
+                el.object3D.position.set(
+                  hitPose.transform.position.x,
+                  hitPose.transform.position.y,
+                  hitPose.transform.position.z
+                );
+              }
+            });
+
+            scene.renderer.xr.addEventListener('sessionend', () => {
+              xrHitTestSource = null;
+              viewerSpace = null;
+              refSpace = null;
+            });
+          });
+
+          this.el.sceneEl.renderer.xr.addEventListener('update', () => {
+            const frame = scene.frame;
+            if (!frame || !xrHitTestSource || !refSpace) return;
+            const hitTestResults = frame.getHitTestResults(xrHitTestSource);
+            if (hitTestResults.length > 0) {
+              hitPose = hitTestResults[0].getPose(refSpace);
+              // Mostrar marcador visual opcional o mover el avatar en tiempo real:
+              el.object3D.position.set(
+                hitPose.transform.position.x,
+                hitPose.transform.position.y,
+                hitPose.transform.position.z
               );
-              el.setAttribute('visible', true);
             }
-          };
-          session.requestAnimationFrame(onXRFrame);
+          });
+        }
+      });
+    </script>
+  </head>
 
-          session.addEventListener('end', () => hitTestSource.cancel && hitTestSource.cancel());
-        });
-      }
-    });
-  </script>
-</head>
-<body style="margin:0; overflow:hidden;">
-  <a-scene
-    xr-mode-ui="enabled: true"
-    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-    renderer="colorManagement: true;"
-  >
-    <!-- Assets -->
-    <a-assets>
-      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    </a-assets>
+  <body style="margin: 0; overflow: hidden;">
+    <a-scene
+      renderer="colorManagement: true; physicallyCorrectLights: true;"
+      webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #overlay;"
+      xr-mode-ui="enabled: true"
+      background="color: #ECECEC"
+    >
+      <!-- Precarga -->
+      <a-assets>
+        <a-asset-item
+          id="avatarModel"
+          src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+        ></a-asset-item>
+      </a-assets>
 
-    <!-- Cámara -->
-    <a-entity camera look-controls position="0 1.6 0"></a-entity>
+      <!-- Cámara -->
+      <a-entity id="cameraRig" position="0 0 0">
+        <a-camera id="mainCamera" position="0 1.6 0" look-controls wasd-controls></a-camera>
+      </a-entity>
 
-    <!-- Avatar dinámico AR con animación -->
-    <a-entity
-      gltf-model="#avatarModel"
-      scale="0.5 0.5 0.5"
-      animation-mixer
-      ar-hit-avatar
-    ></a-entity>
+      <!-- Avatar -->
+      <a-entity
+        id="avatar"
+        gltf-model="#avatarModel"
+        position="0 0 -1.5"
+        rotation="0 180 0"
+        scale="1 1 1"
+        animation-mixer
+        ar-hit-placement
+      ></a-entity>
 
-    <!-- Cielo y entorno solo visibles en VR -->
-    <a-sky
-      src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"
-      hide-in-ar
-    ></a-sky>
+      <!-- Entorno VR -->
+      <a-entity
+        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
+        hide-in-ar
+      ></a-entity>
 
-    <a-entity
-      environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
-      hide-in-ar
-    ></a-entity>
+      <!-- Cielo VR -->
+      <a-sky
+        src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"
+        rotation="0 -130 0"
+        hide-in-ar
+      ></a-sky>
 
-    <!-- Luces -->
-    <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-  </a-scene>
-</body>
+      <!-- Luces -->
+      <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
+      <a-light type="directional" position="0 3 3" intensity="1.2" castShadow="true"></a-light>
+    </a-scene>
+  </body>
 </html>
