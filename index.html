@@ -1,16 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <title>Model Viewer AR - VR</title>
   <meta name="description" content="Model Viewer (VR / AR) • A-Frame">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  
+  <!-- Scripts oficiales -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-animation-mixer@6.0.0/dist/aframe-animation-mixer.min.js"></script>
 </head>
 <body>
 
-<a-scene xr-mode-ui="enableAR: true">
+<a-scene xr-mode-ui="xrMode: xr;" embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false" shadow="type: pcfsoft">
   
   <!-- Luz ambiental y direccional -->
   <a-entity light="type: ambient; intensity: 0.5"></a-entity>
@@ -19,16 +22,19 @@
   <!-- Suelo con sombra -->
   <a-plane rotation="-90 0 0" width="20" height="20" color="#228B22" shadow></a-plane>
 
-  <!-- Paisaje VR (montañas y cielo) -->
+  <!-- Paisaje VR -->
   <a-sky color="#87CEEB"></a-sky>
-  <a-entity id="mountains" gltf-model="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Landscape/GlTF/Landscape.gltf"
-            scale="0.5 0.5 0.5" position="0 0 -10"></a-entity>
+  <a-entity id="mountains" 
+            gltf-model="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Landscape/GlTF/Landscape.gltf"
+            scale="0.5 0.5 0.5" 
+            position="0 0 -10">
+  </a-entity>
 
-  <!-- Avatar 3D (frente a la cámara) -->
+  <!-- Avatar 3D con animación -->
   <a-entity 
     gltf-model="#avatarModel"
-    position="0 0 0"       <!-- Centrado en el suelo -->
-    rotation="0 180 0"     <!-- Siempre de frente a la cámara -->
+    position="0 0 0"
+    rotation="0 180 0"
     scale="1 1 1"
     shadow
     animation-mixer>
