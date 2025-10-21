@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR + VR Profesional y Optimizado</title>
+  <title>AR + VR Optimizado sin Assets</title>
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   <script src="https://cdn.rawgit.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -17,13 +17,6 @@
     shadow="type: pcfsoft"
     renderer="colorManagement: true; physicallyCorrectLights: true">
 
-  <!-- Assets -->
-  <a-assets>
-    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    <a-asset-item id="vrLandscape" src="https://cdn.jsdelivr.net/gh/Free3D/3D-Models@main/terrain/mountain.obj"></a-asset-item>
-    <img id="floorTexture" src="https://cdn.jsdelivr.net/gh/Free3D/Textures@main/wood/wood_texture.jpg">
-  </a-assets>
-
   <!-- Luces generales -->
   <a-entity light="type: ambient; intensity: 0.6"></a-entity>
   <a-entity light="type: directional; intensity: 1" position="5 10 5" cast-shadow></a-entity>
@@ -31,24 +24,32 @@
   <!-- ESCENA VR -->
   <a-entity id="vrScene" visible="true">
     <a-sky color="#87CEEB"></a-sky>
-    <a-entity gltf-model="#vrLandscape" position="0 0 -10" scale="1 1 1"></a-entity>
     <a-plane rotation="-90 0 0" width="30" height="30" color="#228B22" shadow></a-plane>
     
     <!-- Avatar frente a cámara -->
-    <a-entity id="vrAvatar" gltf-model="#avatarModel" position="0 0 -2" rotation="0 180 0" scale="1 1 1" animation-mixer shadow look-at="[camera]"></a-entity>
+    <a-entity id="vrAvatar" 
+              gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" 
+              position="0 0 -2" 
+              rotation="0 180 0" 
+              scale="1 1 1" 
+              animation-mixer 
+              shadow 
+              look-at="[camera]">
+    </a-entity>
   </a-entity>
 
   <!-- ESCENA AR -->
   <a-anchor id="arAnchor">
-    <!-- Suelo AR -->
-    <a-plane rotation="-90 0 0" width="5" height="5" src="#floorTexture" shadow="receive: true"></a-plane>
+    <!-- Suelo AR simple -->
+    <a-plane rotation="-90 0 0" width="5" height="5" color="#AAAAAA" shadow="receive: true"></a-plane>
 
     <!-- Avatar dinámico e interactivo -->
-    <a-entity id="arAvatar" gltf-model="#avatarModel" 
+    <a-entity id="arAvatar" 
+              gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" 
               position="0 0 -1.5" 
               scale="0.8 0.8 0.8" 
-              animation-mixer
-              shadow
+              animation-mixer 
+              shadow 
               look-at="[camera]">
     </a-entity>
 
