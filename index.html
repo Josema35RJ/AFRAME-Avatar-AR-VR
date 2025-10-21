@@ -2,42 +2,76 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Model Viewer AR - VR</title>
+  <title>Avatar VR + AR</title>
   <meta name="description" content="Model Viewer (VR / AR) • A-Frame">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.8.0/dist/aframe-ar.min.js"></script>
 </head>
 <body>
 
-<a-scene background="color: #ECECEC" xr-mode-ui="enableAR: true">
-  
-  <!-- Luz ambiental -->
-  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-  <a-entity light="type: directional; intensity: 0.8" position="1 1 0.5"></a-entity>
-
-  <!-- Suelo -->
-  <a-plane rotation="-90 0 0" width="10" height="10" color="#7BC8A4" shadow></a-plane>
-
-  <!-- Avatar 3D -->
-  <a-entity 
-    gltf-model="#avatarModel"
-    position="0 0 0"
-    scale="1 1 1"
-    rotation="0 180 0"
-    shadow
-    animation-mixer>
-  </a-entity>
+<a-scene
+    xr-mode-ui="enableAR: true"
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    vr-mode-ui="enabled: true">
 
   <!-- Assets -->
   <a-assets timeout="10000">
     <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+    <img id="beachSky" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg">
   </a-assets>
 
-  <!-- Cámara y controles -->
-  <a-entity camera look-controls position="0 1.6 3"></a-entity>
+  <!-- Luzes -->
+  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+  <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
 
+  <!-- Escenario VR -->
+  <a-sky id="vrSky" src="#beachSky" visible="false"></a-sky>
+
+  <!-- Suelo AR (solo en AR) -->
+  <a-plane id="arFloor" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="false"></a-plane>
+
+  <!-- Avatar -->
+  <a-entity id="avatar"
+            gltf-model="#avatarModel"
+            position="0 0 0"
+            scale="1 1 1"
+            rotation="0 180 0"
+            animation-mixer
+            shadow
+            look-at="[camera]">
+  </a-entity>
+
+  <!-- Cámara -->
+  <a-entity camera look-controls position="0 1.6 3"></a-entity>
 </a-scene>
+
+<script>
+  const scene = document.querySelector('a-scene');
+  const vrSky = document.getElementById('vrSky');
+  const arFloor = document.getElementById('arFloor');
+  const avatar = document.getElementById('avatar');
+
+  scene.addEventListener('enter-vr', () => {
+    if (AFRAME.utils.device.checkHeadsetConnected()) {
+      // Modo VR
+      vrSky.setAttribute('visible', true);
+      arFloor.setAttribute('visible', false);
+      avatar.setAttribute('position', '0 0 0');
+    }
+  });
+
+  scene.addEventListener('enter-ar', () => {
+    if (!AFRAME.utils.device.checkHeadsetConnected()) {
+      // Modo AR
+      vrSky.setAttribute('visible', false);
+      arFloor.setAttribute('visible', true);
+      avatar.setAttribute('position', '0 0 0'); // se ajusta al suelo AR
+    }
+  });
+</script>
 
 </body>
 </html>
