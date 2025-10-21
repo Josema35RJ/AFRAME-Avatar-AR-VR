@@ -1,93 +1,57 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
   <title>Avatar AR + VR Mejorado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.8.0/dist/aframe-ar.min.js"></script>
 </head>
-<body style="margin:0; overflow:hidden;">
+<body>
 
-<a-scene
-    xr-mode-ui="enableAR: true">
+<a-scene xr-mode-ui="enableAR: true" shadow="type: pcfsoft" renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #87CEEB">
 
   <!-- Assets -->
   <a-assets timeout="10000">
     <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    <img id="vrSky" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg">
+    <a-asset-item id="vrLandscape" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Landscape/GlTF/Landscape.gltf"></a-asset-item>
+    <img id="floorTexture" src="https://cdn.pixabay.com/photo/2016/03/28/09/37/wood-1284339_960_720.jpg">
   </a-assets>
 
-  <!-- Luces -->
-  <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-  <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
+  <!-- Luzes generales -->
+  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+  <a-entity light="type: directional; intensity: 1" position="5 10 5" cast-shadow></a-entity>
 
-  <!-- Escenario VR -->
-  <a-sky id="skyVR" src="#vrSky" visible="false"></a-sky>
+  <!-- ESCENA VR -->
+  <a-entity id="vrScene" visible="true">
+    <a-sky color="#87CEEB"></a-sky>
+    <a-entity gltf-model="#vrLandscape" position="0 0 -10" scale="0.5 0.5 0.5"></a-entity>
+    <a-plane rotation="-90 0 0" width="20" height="20" color="#228B22" shadow></a-plane>
+    <a-entity gltf-model="#avatarModel" position="0 0 0" rotation="0 180 0" scale="1 1 1" animation-mixer shadow></a-entity>
+  </a-entity>
 
-  <!-- Suelo AR -->
-  <a-plane id="arFloor" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="true" shadow></a-plane>
+  <!-- ESCENA AR MEJORADA -->
+  <a-entity id="arScene" visible="true">
+    <!-- Suelo realista para AR -->
+    <a-plane rotation="-90 0 0" width="5" height="5" src="#floorTexture" shadow="receive: true"></a-plane>
 
-  <!-- Avatar -->
-  <a-entity id="avatar"
-            gltf-model="#avatarModel"
-            position="0 0 0"
-            scale="1 1 1"
-            rotation="0 0 0"
-            shadow
-            animation-mixer>
+    <!-- Avatar centrado y frente a cámara -->
+    <a-entity gltf-model="#avatarModel" 
+              position="0 0 0" 
+              rotation="0 180 0" 
+              scale="0.8 0.8 0.8" 
+              animation-mixer 
+              shadow>
+    </a-entity>
+
+    <!-- Luzes direccionales sutiles para AR -->
+    <a-entity light="type: directional; intensity: 0.8; castShadow: true" position="1 3 1"></a-entity>
   </a-entity>
 
   <!-- Cámara -->
-  <a-entity id="cam" camera look-controls position="0 1.6 3"></a-entity>
+  <a-entity camera look-controls position="0 1.6 3"></a-entity>
 
 </a-scene>
-
-<script>
-  const scene = document.querySelector('a-scene');
-  const skyVR = document.getElementById('skyVR');
-  const arFloor = document.getElementById('arFloor');
-  const avatar = document.getElementById('avatar');
-  const camera = document.getElementById('cam');
-
-  // Detectar VR o AR
-  scene.addEventListener('enter-vr', () => {
-    if (AFRAME.utils.device.checkHeadsetConnected()) {
-      // VR
-      skyVR.setAttribute('visible', true);
-      arFloor.setAttribute('visible', false);
-      avatar.setAttribute('rotation', '0 180 0');
-    } else {
-      // AR
-      skyVR.setAttribute('visible', false);
-      arFloor.setAttribute('visible', true);
-      avatar.setAttribute('rotation', '0 0 0');
-    }
-  });
-
-  // Colocación táctil AR
-  scene.addEventListener('click', (evt) => {
-    if (!AFRAME.utils.device.checkHeadsetConnected()) {
-      const touchPoint = evt.detail.intersection ? evt.detail.intersection.point : null;
-      if (touchPoint) {
-        // Limitar a dimensiones del suelo
-        const x = Math.max(-5, Math.min(5, touchPoint.x));
-        const z = Math.max(-5, Math.min(5, touchPoint.z));
-        avatar.setAttribute('position', {x: x, y: 0, z: z});
-      }
-    }
-  });
-
-  // Actualización continua del avatar para mirar a la cámara en AR
-  scene.addEventListener('renderstart', () => {
-    scene.addEventListener('frame', () => {
-      if (!AFRAME.utils.device.checkHeadsetConnected()) {
-        avatar.object3D.lookAt(camera.object3D.position);
-      }
-    });
-  });
-</script>
 
 </body>
 </html>
