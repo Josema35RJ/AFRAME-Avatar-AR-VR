@@ -2,112 +2,70 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR + VR Optimizado sin Assets</title>
+  <title>Avatar VR / AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  
+  <!-- A-Frame y extras -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-  <script src="https://cdn.rawgit.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
 <body style="margin:0; overflow:hidden;">
 
-<a-scene 
-    vr-mode-ui="enabled: true" 
+  <!-- Escena principal con soporte VR/AR -->
+  <a-scene
+    xr-mode-ui="XRMode: xr;"
     embedded
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;" 
-    shadow="type: pcfsoft"
-    renderer="colorManagement: true; physicallyCorrectLights: true">
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    renderer="colorManagement: true; antialias: true"
+  >
+    <!-- Assets -->
+    <a-assets>
+      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+    </a-assets>
 
-  <!-- Luces generales -->
-  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-  <a-entity light="type: directional; intensity: 1" position="5 10 5" cast-shadow></a-entity>
+    <!-- Luces -->
+    <a-entity light="type: directional; intensity: 1" position="0 4 4"></a-entity>
+    <a-entity light="type: ambient; intensity: 0.5"></a-entity>
 
-  <!-- ESCENA VR -->
-  <a-entity id="vrScene" visible="true">
-    <a-sky color="#87CEEB"></a-sky>
-    <a-plane rotation="-90 0 0" width="30" height="30" color="#228B22" shadow></a-plane>
-    
-    <!-- Avatar frente a cámara -->
-    <a-entity id="vrAvatar" 
-              gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" 
-              position="0 0 -2" 
-              rotation="0 180 0" 
-              scale="1 1 1" 
-              animation-mixer 
-              shadow 
-              look-at="[camera]">
-    </a-entity>
-  </a-entity>
+    <!-- Cámara AR/VR -->
+    <a-entity camera look-controls position="0 1.6 3" id="mainCamera"></a-entity>
 
-  <!-- ESCENA AR -->
-  <a-anchor id="arAnchor">
-    <!-- Suelo AR simple -->
-    <a-plane rotation="-90 0 0" width="5" height="5" color="#AAAAAA" shadow="receive: true"></a-plane>
+    <!-- Avatar 3D siempre mirando a la cámara -->
+    <a-entity
+      id="avatar"
+      gltf-model="#avatarModel"
+      scale="0.5 0.5 0.5"
+      position="0 0 -2"
+      animation-mixer
+      look-at="#mainCamera"
+    ></a-entity>
 
-    <!-- Avatar dinámico e interactivo -->
-    <a-entity id="arAvatar" 
-              gltf-model="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb" 
-              position="0 0 -1.5" 
-              scale="0.8 0.8 0.8" 
-              animation-mixer 
-              shadow 
-              look-at="[camera]">
-    </a-entity>
+    <!-- Suelo VR (solo se ve en VR) -->
+    <a-plane id="vrGround" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="true"></a-plane>
 
-    <!-- Iluminación AR -->
-    <a-entity light="type: directional; intensity: 0.8; castShadow: true" position="1 3 1"></a-entity>
-    <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-  </a-anchor>
+    <!-- Cielo VR -->
+    <a-sky color="#ECECEC"></a-sky>
 
-  <!-- Cámara -->
-  <a-entity camera position="0 1.6 0" look-controls></a-entity>
+    <!-- Botones automáticos VR/AR -->
+    <a-entity id="xr-button" xr-ui="mode: both" position="0 0 0"></a-entity>
 
-  <!-- Fallback -->
-  <a-entity id="fallbackText" position="0 2 -2" text="value: Dispositivo no compatible con AR/VR; align: center; width: 4;"></a-entity>
+  </a-scene>
 
-  <!-- Componente para AR interactivo y VR frente a cámara -->
+  <!-- Script para que el avatar siga la cámara en AR -->
   <script>
-    AFRAME.registerComponent('avatar-follow', {
-      schema: {
-        arMinDistance: {type: 'number', default: 1.2},
-        arMaxDistance: {type: 'number', default: 2.0},
-        vrDistance: {type: 'number', default: 2.0}
-      },
+    AFRAME.registerComponent('follow-camera-ar', {
       tick: function () {
-        const arAvatar = document.querySelector('#arAvatar');
-        const vrAvatar = document.querySelector('#vrAvatar');
-        const camera = document.querySelector('[camera]');
-        if (!camera) return;
-
-        const camPos = camera.object3D.position;
-
-        // AR Avatar: seguir al usuario manteniendo distancia cómoda
-        if (arAvatar) {
-          const arPos = arAvatar.object3D.position;
-          const dx = camPos.x - arPos.x;
-          const dz = camPos.z - arPos.z;
-          const distance = Math.sqrt(dx*dx + dz*dz);
-          const targetDistance = Math.min(Math.max(distance, this.data.arMinDistance), this.data.arMaxDistance);
-          const angle = Math.atan2(dz, dx);
-          arPos.x = camPos.x - targetDistance * Math.cos(angle);
-          arPos.z = camPos.z - targetDistance * Math.sin(angle);
-          arAvatar.object3D.lookAt(camPos.x, arPos.y, camPos.z);
-        }
-
-        // VR Avatar: mantener frente a cámara
-        if (vrAvatar) {
-          const vrPos = vrAvatar.object3D.position;
-          vrPos.x = camPos.x;
-          vrPos.z = camPos.z - this.data.vrDistance;
-          vrAvatar.object3D.lookAt(camPos.x, vrPos.y, camPos.z);
+        const camera = document.querySelector('#mainCamera');
+        const avatar = document.querySelector('#avatar');
+        if (AFRAME.utils.device.isMobile() && avatar && camera) {
+          // Posicionar avatar frente a la cámara en AR
+          const camPos = camera.object3D.position;
+          avatar.object3D.position.set(camPos.x, camPos.y - 1.6, camPos.z - 2);
         }
       }
     });
 
-    document.querySelector('#arAvatar').setAttribute('avatar-follow', '');
-    document.querySelector('#vrAvatar').setAttribute('avatar-follow', '');
+    document.querySelector('#avatar').setAttribute('follow-camera-ar', '');
   </script>
-
-</a-scene>
-
 </body>
 </html>
