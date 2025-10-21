@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Avatar VR + AR Profesional</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avatar AR + VR Mejorado</title>
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.8.0/dist/aframe-ar.min.js"></script>
 </head>
-<body>
+<body style="margin:0; overflow:hidden;">
 
 <a-scene
     embedded
@@ -55,7 +55,7 @@
   const avatar = document.getElementById('avatar');
   const camera = document.getElementById('cam');
 
-  // Detectar VR vs AR y ajustar visibilidad
+  // Detectar VR o AR
   scene.addEventListener('enter-vr', () => {
     if (AFRAME.utils.device.checkHeadsetConnected()) {
       // VR
@@ -70,34 +70,26 @@
     }
   });
 
-  // Colocación táctil en AR
+  // Colocación táctil AR
   scene.addEventListener('click', (evt) => {
     if (!AFRAME.utils.device.checkHeadsetConnected()) {
       const touchPoint = evt.detail.intersection ? evt.detail.intersection.point : null;
-      if (touchPoint) avatar.setAttribute('position', touchPoint);
+      if (touchPoint) {
+        // Limitar a dimensiones del suelo
+        const x = Math.max(-5, Math.min(5, touchPoint.x));
+        const z = Math.max(-5, Math.min(5, touchPoint.z));
+        avatar.setAttribute('position', {x: x, y: 0, z: z});
+      }
     }
   });
 
-  // Hacer que el avatar siempre mire a la cámara (AR y VR)
-  scene.addEventListener('loaded', () => {
-    scene.addEventListener('renderstart', () => {
-      scene.addBehavior = () => {
-        scene.addEventListener('componentchanged', () => {
-          if (!AFRAME.utils.device.checkHeadsetConnected()) {
-            avatar.object3D.lookAt(camera.object3D.position);
-          }
-        });
-      };
-    });
-  });
-
-  // Alternativa más estable: actualizar cada frame en AR
-  scene.addEventListener('enter-vr', () => {
-    if (!AFRAME.utils.device.checkHeadsetConnected()) {
-      scene.addEventListener('frame', () => {
+  // Actualización continua del avatar para mirar a la cámara en AR
+  scene.addEventListener('renderstart', () => {
+    scene.addEventListener('frame', () => {
+      if (!AFRAME.utils.device.checkHeadsetConnected()) {
         avatar.object3D.lookAt(camera.object3D.position);
-      });
-    }
+      }
+    });
   });
 </script>
 
