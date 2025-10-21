@@ -2,70 +2,85 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Avatar VR / AR</title>
+  <title>Avatar VR / AR Profesional</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  
-  <!-- A-Frame y extras -->
+
+  <!-- A-Frame y AR.js oficiales -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
 </head>
-<body style="margin:0; overflow:hidden;">
+<body>
 
-  <!-- Escena principal con soporte VR/AR -->
-  <a-scene
-    xr-mode-ui="XRMode: xr;"
-    embedded
-    arjs="sourceType: webcam; debugUIEnabled: false;"
-    renderer="colorManagement: true; antialias: true"
-  >
-    <!-- Assets -->
-    <a-assets>
-      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    </a-assets>
+<a-scene
+  xr-mode-ui="XRMode: xr;"
+  embedded
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+  renderer="colorManagement: true; antialias: true"
+>
+  <!-- Assets -->
+  <a-assets>
+    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+  </a-assets>
 
-    <!-- Luces -->
-    <a-entity light="type: directional; intensity: 1" position="0 4 4"></a-entity>
-    <a-entity light="type: ambient; intensity: 0.5"></a-entity>
+  <!-- Luz -->
+  <a-entity light="type: directional; intensity: 1" position="0 4 4"></a-entity>
+  <a-entity light="type: ambient; intensity: 0.5"></a-entity>
 
-    <!-- Cámara AR/VR -->
-    <a-entity camera look-controls position="0 1.6 3" id="mainCamera"></a-entity>
+  <!-- Cámara AR/VR -->
+  <a-entity camera look-controls id="mainCamera"></a-entity>
 
-    <!-- Avatar 3D siempre mirando a la cámara -->
-    <a-entity
-      id="avatar"
-      gltf-model="#avatarModel"
-      scale="0.5 0.5 0.5"
-      position="0 0 -2"
-      animation-mixer
-      look-at="#mainCamera"
-    ></a-entity>
+  <!-- Suelo virtual (VR) -->
+  <a-plane rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="true"></a-plane>
 
-    <!-- Suelo VR (solo se ve en VR) -->
-    <a-plane id="vrGround" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="true"></a-plane>
+  <!-- Cielo VR -->
+  <a-sky color="#ECECEC"></a-sky>
 
-    <!-- Cielo VR -->
-    <a-sky color="#ECECEC"></a-sky>
+  <!-- Avatar 3D -->
+  <a-entity
+    id="avatar"
+    gltf-model="#avatarModel"
+    scale="0.5 0.5 0.5"
+    animation-mixer
+    look-at="#mainCamera"
+    gesture-handler
+    arjs-anchor
+  ></a-entity>
 
-    <!-- Botones automáticos VR/AR -->
-    <a-entity id="xr-button" xr-ui="mode: both" position="0 0 0"></a-entity>
+  <!-- Botones automáticos VR/AR -->
+  <a-entity id="xr-button" xr-ui="mode: both" position="0 0 0"></a-entity>
 
-  </a-scene>
+</a-scene>
 
-  <!-- Script para que el avatar siga la cámara en AR -->
-  <script>
-    AFRAME.registerComponent('follow-camera-ar', {
-      tick: function () {
-        const camera = document.querySelector('#mainCamera');
-        const avatar = document.querySelector('#avatar');
-        if (AFRAME.utils.device.isMobile() && avatar && camera) {
-          // Posicionar avatar frente a la cámara en AR
-          const camPos = camera.object3D.position;
-          avatar.object3D.position.set(camPos.x, camPos.y - 1.6, camPos.z - 2);
-        }
+<!-- Scripts oficiales para interacción y AR -->
+<script>
+  // Componente oficial de AR.js para anclar el avatar al suelo real
+  AFRAME.registerComponent('arjs-anchor', {
+    init: function () {
+      const sceneEl = this.el.sceneEl;
+      if (AFRAME.utils.device.isMobile()) {
+        this.el.setAttribute('arjs-anchor', 'hitTesting: true;');
       }
-    });
+    }
+  });
 
-    document.querySelector('#avatar').setAttribute('follow-camera-ar', '');
-  </script>
+  // Componente oficial de A-Frame Extras para gestos (rotar y escalar)
+  AFRAME.registerComponent('gesture-handler', {
+    init: function () {
+      this.el.sceneEl.addEventListener('onefingermove', evt => {
+        this.el.object3D.rotation.y += evt.detail.positionChange.x * 0.5;
+      });
+      this.el.sceneEl.addEventListener('twofingermove', evt => {
+        const scaleFactor = 1 + evt.detail.positionChange.y * 0.01;
+        this.el.object3D.scale.multiplyScalar(scaleFactor);
+      });
+    }
+  });
+</script>
+
 </body>
 </html>
