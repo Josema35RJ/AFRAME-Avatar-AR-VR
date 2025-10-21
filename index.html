@@ -1,106 +1,67 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>VR + AR con A-Frame</title>
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <title>VR + AR con A-Frame 1.7.1</title>
+    <!-- A-Frame 1.7.1 -->
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <!-- Extras opcionales (animación, física, etc.) -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  </head>
 
-  <script>
-    // Componente para ocultar elementos solo en AR
-    AFRAME.registerComponent('hide-in-ar', {
-      init: function () {
-        const el = this.el;
-        el.setAttribute('visible', true);
-        this.el.sceneEl.addEventListener('enter-vr', () => {
-          const xrSession = this.el.sceneEl.renderer.xr.getSession();
-          const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-          el.setAttribute('visible', !isAR);
-        });
-        this.el.sceneEl.addEventListener('exit-vr', () => {
-          el.setAttribute('visible', true);
-        });
-      }
-    });
+  <body style="margin: 0; overflow: hidden;">
+    <a-scene
+      renderer="colorManagement: true;"
+      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
+      xr-mode-ui="enabled: true"
+      embedded
+    >
 
-    // Componente para colocar avatar dinámicamente en AR con hit-test
-    AFRAME.registerComponent('ar-hit-avatar', {
-      init: async function () {
-        const el = this.el;
-        el.setAttribute('visible', false); // inicialmente oculto
+      <!-- 📦 Assets -->
+      <a-assets>
+        <a-asset-item
+          id="avatarModel"
+          src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+        ></a-asset-item>
+      </a-assets>
 
-        const scene = this.el.sceneEl;
-        scene.addEventListener('enter-vr', async () => {
-          const session = scene.renderer.xr.getSession();
-          if (!session || session.environmentBlendMode !== 'alpha-blend') return;
+      <!-- 🎥 Cámara -->
+      <a-entity camera look-controls position="0 1.6 0"></a-entity>
 
-          // Referencias para hit-test
-          const viewerSpace = await session.requestReferenceSpace('viewer');
-          const referenceSpace = await session.requestReferenceSpace('local-floor');
-          const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+      <!-- 🧍 Avatar (animado y visible en AR o VR) -->
+      <a-entity
+        gltf-model="#avatarModel"
+        scale="0.5 0.5 0.5"
+        animation-mixer
+        position="0 0 0"
+      ></a-entity>
 
-          // Escucha frames de AR
-          const onXRFrame = (time, frame) => {
-            session.requestAnimationFrame(onXRFrame);
+      <!-- 🌄 Entorno (solo visible en VR) -->
+      <a-sky
+        src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"
+        visible="false"
+        id="sky"
+      ></a-sky>
 
-            const hitResults = frame.getHitTestResults(hitTestSource);
-            if (hitResults.length > 0) {
-              const hit = hitResults[0];
-              const pose = hit.getPose(referenceSpace);
-              el.object3D.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-              el.object3D.quaternion.set(
-                pose.transform.orientation.x,
-                pose.transform.orientation.y,
-                pose.transform.orientation.z,
-                pose.transform.orientation.w
-              );
-              el.setAttribute('visible', true);
-            }
-          };
-          session.requestAnimationFrame(onXRFrame);
+      <a-entity
+        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
+        id="env"
+        visible="false"
+      ></a-entity>
 
-          session.addEventListener('end', () => hitTestSource.cancel && hitTestSource.cancel());
-        });
-      }
-    });
-  </script>
-</head>
-<body style="margin:0; overflow:hidden;">
-  <a-scene
-    xr-mode-ui="enabled: true"
-    webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-    renderer="colorManagement: true;"
-  >
-    <!-- Assets -->
-    <a-assets>
-      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    </a-assets>
+      <!-- 💡 Luces -->
+      <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+      <a-light type="directional" position="1 3 2" intensity="1.2"></a-light>
+    </a-scene>
 
-    <!-- Cámara -->
-    <a-entity camera look-controls position="0 1.6 0"></a-entity>
-
-    <!-- Avatar dinámico AR con animación -->
-    <a-entity
-      gltf-model="#avatarModel"
-      scale="0.5 0.5 0.5"
-      animation-mixer
-      ar-hit-avatar
-    ></a-entity>
-
-    <!-- Cielo y entorno solo visibles en VR -->
-    <a-sky
-      src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"
-      hide-in-ar
-    ></a-sky>
-
-    <a-entity
-      environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
-      hide-in-ar
-    ></a-entity>
-
-    <!-- Luces -->
-    <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-    <a-light type="directional" position="0 5 5" intensity="1"></a-light>
-  </a-scene>
-</body>
+    <!-- 🔧 Script mínimo para alternar VR/AR -->
+    <script>
+      AFRAME.scenes[0].addEventListener("enter-vr", () => {
+        const scene = AFRAME.scenes[0];
+        const isAR = scene.is("ar-mode");
+        document.getElementById("sky").setAttribute("visible", !isAR);
+        document.getElementById("env").setAttribute("visible", !isAR);
+      });
+    </script>
+  </body>
 </html>
