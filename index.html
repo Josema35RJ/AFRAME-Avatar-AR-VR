@@ -1,18 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Avatar AR + VR Mejorado</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR + VR Dinámico</title>
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.rawgit.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
-<body>
+<body style="margin: 0; overflow: hidden;">
 
-<a-scene xr-mode-ui="enableAR: true" shadow="type: pcfsoft" renderer="colorManagement: true; physicallyCorrectLights: true">
+<!-- Escena principal -->
+<a-scene 
+    vr-mode-ui="enabled: true" 
+    embedded
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;" 
+    shadow="type: pcfsoft">
 
   <!-- Assets -->
-  <a-assets timeout="10000">
+  <a-assets>
     <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
     <a-asset-item id="vrLandscape" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Landscape/GlTF/Landscape.gltf"></a-asset-item>
     <img id="floorTexture" src="https://cdn.pixabay.com/photo/2016/03/28/09/37/wood-1284339_960_720.jpg">
@@ -25,46 +31,35 @@
   <!-- ESCENA VR -->
   <a-entity id="vrScene" visible="true">
     <a-sky color="#87CEEB"></a-sky>
-
-    <!-- Paisaje mejorado: montañas y terreno -->
     <a-entity gltf-model="#vrLandscape" position="0 0 -10" scale="1 1 1"></a-entity>
-    
-    <!-- Suelo grande para VR -->
     <a-plane rotation="-90 0 0" width="30" height="30" color="#228B22" shadow></a-plane>
-
-    <!-- Avatar centrado frente a cámara -->
-    <a-entity gltf-model="#avatarModel" 
-              position="0 0 0" 
-              rotation="0 180 0" 
-              scale="1 1 1" 
-              animation-mixer 
-              shadow></a-entity>
+    <a-entity gltf-model="#avatarModel" position="0 0 0" rotation="0 180 0" scale="1 1 1" animation-mixer shadow></a-entity>
   </a-entity>
 
-  <!-- ESCENA AR MEJORADA -->
-  <a-entity id="arScene" visible="true">
-    <!-- Suelo texturizado para AR -->
+  <!-- ESCENA AR DINÁMICA -->
+  <a-anchor id="arAnchor">
+    <!-- Suelo virtual -->
     <a-plane rotation="-90 0 0" width="5" height="5" src="#floorTexture" shadow="receive: true"></a-plane>
 
-    <!-- Avatar siempre mirando a la cámara -->
-    <a-entity gltf-model="#avatarModel" 
+    <!-- Avatar dinámico -->
+    <a-entity id="arAvatar" gltf-model="#avatarModel" 
               position="0 0 0" 
               rotation="0 180 0" 
               scale="0.8 0.8 0.8" 
-              animation-mixer 
-              shadow>
-      <a-animation attribute="rotation" to="0 180 0" dur="0"></a-animation>
+              animation-mixer
+              shadow
+              look-at="[camera]">
     </a-entity>
 
-    <!-- Luz ambiental y direccional para AR -->
+    <!-- Iluminación AR -->
     <a-entity light="type: directional; intensity: 0.8; castShadow: true" position="1 3 1"></a-entity>
     <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-  </a-entity>
+  </a-anchor>
 
   <!-- Cámara -->
-  <a-entity camera look-controls position="0 1.6 3"></a-entity>
+  <a-entity camera position="0 1.6 3" look-controls></a-entity>
 
-  <!-- Fallback 3D -->
+  <!-- Fallback -->
   <a-entity id="fallbackText" position="0 2 -2" text="value: Dispositivo no compatible con AR/VR; align: center; width: 4;"></a-entity>
 
 </a-scene>
