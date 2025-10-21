@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Model Viewer AR - VR</title>
+  <title>Avatar VR + AR Profesional</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
@@ -12,25 +12,26 @@
 
 <a-scene
     embedded
+    background="color: #ECECEC"
     xr-mode-ui="enableAR: true"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     vr-mode-ui="enabled: true">
 
   <!-- Assets -->
-  <a-assets>
+  <a-assets timeout="10000">
     <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
     <img id="vrSky" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg">
   </a-assets>
 
   <!-- Luces -->
   <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-  <a-entity light="type: directional; intensity: 0.8" position="1 1 0.5"></a-entity>
-
-  <!-- Suelo AR -->
-  <a-plane id="arFloor" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" shadow></a-plane>
+  <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
 
   <!-- Escenario VR -->
   <a-sky id="skyVR" src="#vrSky" visible="false"></a-sky>
+
+  <!-- Suelo AR -->
+  <a-plane id="arFloor" rotation="-90 0 0" width="10" height="10" color="#7BC8A4" visible="true" shadow></a-plane>
 
   <!-- Avatar -->
   <a-entity id="avatar"
@@ -38,13 +39,12 @@
             position="0 0 0"
             scale="1 1 1"
             rotation="0 0 0"
-            animation-mixer
-            look-at="[camera]"
-            shadow>
+            shadow
+            animation-mixer>
   </a-entity>
 
   <!-- Cámara -->
-  <a-entity camera look-controls position="0 1.6 3"></a-entity>
+  <a-entity id="cam" camera look-controls position="0 1.6 3"></a-entity>
 
 </a-scene>
 
@@ -53,17 +53,20 @@
   const skyVR = document.getElementById('skyVR');
   const arFloor = document.getElementById('arFloor');
   const avatar = document.getElementById('avatar');
+  const camera = document.getElementById('cam');
 
-  // Detectar VR/AR y mostrar elementos correctos
+  // Detectar VR vs AR y ajustar visibilidad
   scene.addEventListener('enter-vr', () => {
     if (AFRAME.utils.device.checkHeadsetConnected()) {
       // VR
       skyVR.setAttribute('visible', true);
       arFloor.setAttribute('visible', false);
+      avatar.setAttribute('rotation', '0 180 0');
     } else {
       // AR
       skyVR.setAttribute('visible', false);
       arFloor.setAttribute('visible', true);
+      avatar.setAttribute('rotation', '0 0 0');
     }
   });
 
@@ -71,9 +74,29 @@
   scene.addEventListener('click', (evt) => {
     if (!AFRAME.utils.device.checkHeadsetConnected()) {
       const touchPoint = evt.detail.intersection ? evt.detail.intersection.point : null;
-      if (touchPoint) {
-        avatar.setAttribute('position', touchPoint);
-      }
+      if (touchPoint) avatar.setAttribute('position', touchPoint);
+    }
+  });
+
+  // Hacer que el avatar siempre mire a la cámara (AR y VR)
+  scene.addEventListener('loaded', () => {
+    scene.addEventListener('renderstart', () => {
+      scene.addBehavior = () => {
+        scene.addEventListener('componentchanged', () => {
+          if (!AFRAME.utils.device.checkHeadsetConnected()) {
+            avatar.object3D.lookAt(camera.object3D.position);
+          }
+        });
+      };
+    });
+  });
+
+  // Alternativa más estable: actualizar cada frame en AR
+  scene.addEventListener('enter-vr', () => {
+    if (!AFRAME.utils.device.checkHeadsetConnected()) {
+      scene.addEventListener('frame', () => {
+        avatar.object3D.lookAt(camera.object3D.position);
+      });
     }
   });
 </script>
