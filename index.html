@@ -10,13 +10,34 @@
 </head>
 <body>
 
-<a-scene xr-mode-ui="XRMode: xr;">
-  <a-assets timeout="10000">
-   <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+<a-scene background="color: #ECECEC" xr-mode-ui="enableAR: true">
+  
+  <!-- Luz ambiental -->
+  <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+  <a-entity light="type: directional; intensity: 0.8" position="1 1 0.5"></a-entity>
 
-    <img id="shadow" src="shadow.png">
-    <a-asset-item id="messageText" src="message.html"></a-asset-item>
+  <!-- Suelo -->
+  <a-plane rotation="-90 0 0" width="10" height="10" color="#7BC8A4" shadow></a-plane>
+
+  <!-- Avatar 3D -->
+  <a-entity 
+    gltf-model="#avatarModel"
+    position="0 0 0"
+    scale="1 1 1"
+    rotation="0 180 0"
+    shadow
+    animation-mixer>
+  </a-entity>
+
+  <!-- Assets -->
+  <a-assets timeout="10000">
+    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
   </a-assets>
+
+  <!-- Cámara y controles -->
+  <a-entity camera look-controls position="0 1.6 3"></a-entity>
+
 </a-scene>
+
 </body>
 </html>
