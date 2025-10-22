@@ -1,126 +1,94 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <title>VR + AR con A-Frame</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>Model Viewer AR - VR</title>
+    <meta name="description" content="Model Viewer (VR / AR) • A-Frame">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- A-Frame base -->
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+
+    <!-- Extensiones oficiales -->
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    <!-- Ocultar elementos en AR -->
-    <script>
-      AFRAME.registerComponent('hide-in-ar', {
-        init: function () {
-          const el = this.el;
-          el.setAttribute('visible', true);
-          this.el.sceneEl.addEventListener('enter-vr', () => {
-            const xrSession = this.el.sceneEl.renderer.xr.getSession();
-            const isAR = xrSession && xrSession.environmentBlendMode === 'alpha-blend';
-            if (isAR) el.setAttribute('visible', false);
-          });
-          this.el.sceneEl.addEventListener('exit-vr', () => {
-            el.setAttribute('visible', true);
-          });
-        }
-      });
-    </script>
-
-    <!-- Hit-test automático para AR -->
-    <script>
-      AFRAME.registerComponent('ar-hit-test', {
-        init: function () {
-          const el = this.el;
-          const sceneEl = el.sceneEl;
-
-          this.viewerSpace = null;
-          this.refSpace = null;
-          this.hitTestSource = null;
-
-          sceneEl.renderer.xr.addEventListener('sessionstart', (e) => {
-            const session = sceneEl.renderer.xr.getSession();
-
-            if (session.requestReferenceSpace && session.requestHitTestSource) {
-              session.requestReferenceSpace('viewer').then((space) => {
-                this.viewerSpace = space;
-                session.requestHitTestSource({ space: this.viewerSpace }).then((source) => {
-                  this.hitTestSource = source;
-                });
-              });
-
-              session.requestReferenceSpace('local').then((space) => {
-                this.refSpace = space;
-              });
-
-              session.addEventListener('end', () => {
-                this.viewerSpace = null;
-                this.refSpace = null;
-                this.hitTestSource = null;
-              });
-            }
-          });
-        },
-        tick: function (time, frame) {
-          const xrFrame = frame;
-          const el = this.el;
-          const session = this.el.sceneEl.renderer.xr.getSession();
-
-          if (!xrFrame || !this.hitTestSource || !this.refSpace) return;
-
-          const hitTestResults = xrFrame.getHitTestResults(this.hitTestSource);
-          if (hitTestResults.length > 0) {
-            const pose = hitTestResults[0].getPose(this.refSpace);
-            el.object3D.visible = true;
-            el.object3D.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-            el.object3D.quaternion.set(
-              pose.transform.orientation.x,
-              pose.transform.orientation.y,
-              pose.transform.orientation.z,
-              pose.transform.orientation.w
-            );
-          }
-        }
-      });
-    </script>
+    <!-- AR.js (para fallback sin WebXR) -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
   </head>
 
-  <body>
+  <body style="margin:0; overflow:hidden; background:#000;">
+
+    <!-- ===================================================== -->
+    <!-- 🟢 ESCENA PRINCIPAL (VR / AR NATIVO WebXR) -->
+    <!-- ===================================================== -->
     <a-scene
-      webxr="optionalFeatures: hit-test; requiredFeatures: local-floor;"
-      renderer="colorManagement: true;"
+      renderer="antialias: true; colorManagement: true;"
       xr-mode-ui="enabled: true"
-    >
-      <!-- Precarga de modelos -->
-      <a-assets>
+      background="color: #ECECEC"
+      embedded
+      vr-mode-ui="enabled: true">
+
+      <!-- Assets -->
+      <a-assets timeout="10000">
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+        <img id="shadow" src="shadow.png">
       </a-assets>
 
-      <!-- Cámara -->
-      <a-camera position="0 1.6 0" look-controls wasd-controls></a-camera>
+      <!-- Luces -->
+      <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+      <a-entity light="type: directional; intensity: 1; position: 0 2 1"></a-entity>
 
-      <!-- Avatar que se adapta en AR -->
+      <!-- Cámara + cursor VR -->
+      <a-entity id="cameraRig" position="0 1.6 3">
+        <a-camera look-controls wasd-controls>
+          <a-cursor 
+            fuse="true" 
+            fuse-timeout="1000"
+            material="color: white; shader: flat">
+          </a-cursor>
+        </a-camera>
+      </a-entity>
+
+      <!-- Suelo -->
+      <a-plane rotation="-90 0 0" width="10" height="10" color="#999" shadow="receive: true"></a-plane>
+
+      <!-- Avatar -->
       <a-entity
         gltf-model="#avatarModel"
+        position="0 0 -2"
         scale="1 1 1"
+        rotation="0 180 0"
+        look-at="[camera]"
         animation-mixer
-        ar-hit-test
-        visible="false"
-      ></a-entity>
+        shadow="cast: true; receive: false">
+      </a-entity>
 
-      <!-- Cielo panorámico (solo VR) -->
-      <a-sky
-        src="url(https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg)"
-        rotation="0 -130 0"
-        hide-in-ar
-      ></a-sky>
-
-      <!-- Entorno virtual (solo VR) -->
-      <a-entity
-        environment="preset: default; ground: hills; groundColor: #f4e2d8; skyType: gradient; skyColor: #88ccee; dressing: trees; dressingAmount: 20; dressingColor: #228B22"
-        hide-in-ar
-      ></a-entity>
-
-      <!-- Luces -->
-      <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
-      <a-light type="directional" position="0 5 5" intensity="1"></a-light>
     </a-scene>
+
+    <!-- ===================================================== -->
+    <!-- 🟡 ESCENA ALTERNATIVA (AR.js - sin WebXR) -->
+    <!-- ===================================================== -->
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false;"
+      vr-mode-ui="enabled: false"
+      renderer="antialias: true; alpha: true; logarithmicDepthBuffer: true;"
+      device-orientation-permission-ui="enabled: true">
+
+      <!-- Marcador AR.js -->
+      <a-marker preset="hiro">
+        <a-entity
+          gltf-model="#avatarModel"
+          position="0 0 0"
+          rotation="0 180 0"
+          scale="0.5 0.5 0.5"
+          look-at="[camera]"
+          animation-mixer>
+        </a-entity>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+
   </body>
 </html>
