@@ -1,46 +1,43 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Avatar World AR/VR</title>
-    <meta name="description" content="Escena estilo Avatar en AR/VR sin JS">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Escena estilo Avatar en AR/VR sin JS" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
   </head>
 
-  <body style="margin:0; overflow:hidden;">
-
+  <body style="margin: 0; overflow: hidden">
     <a-scene
       xr-mode-ui="enabled: true"
-      vr-mode-ui="enabled: true"
-      ar-mode-ui="enabled: true"
       renderer="colorManagement: true; physicallyCorrectLights: true;"
-      environment="
-        preset: forest;
-        ground: hills;
-        groundColor: #0a1f1a;
-        groundColor2: #123b30;
-        skyType: gradient;
-        skyColor: #0a2c58;
-        horizonColor: #7b5ef6;
-        fog: 0.6;
-        lighting: distant;
-        lightPosition: 1 3 2;
-        lightColor: #b3d9ff;
-      "
-      embedded
+      environment="preset: forest; ground: hills; groundColor: #0a1f1a; groundColor2: #123b30; skyType: gradient; skyColor: #0a2c58; horizonColor: #7b5ef6; fog: 0.6; lighting: distant; lightPosition: 1 3 2; lightColor: #b3d9ff;"
     >
-
       <!-- Activos -->
       <a-assets timeout="15000">
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+        <a-asset-item
+          id="avatarModel"
+          src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"
+        ></a-asset-item>
       </a-assets>
 
       <!-- Luces ambientales tipo Pandora -->
-      <a-entity light="type: ambient; color: #88bbff; intensity: 0.6"></a-entity>
-      <a-entity light="type: point; color: #55aaff; intensity: 1.2; distance: 10" position="0 2 2"></a-entity>
-      <a-entity light="type: point; color: #8833ff; intensity: 0.8; distance: 8" position="-2 1 1"></a-entity>
+      <a-entity
+        light="type: ambient; color: #88bbff; intensity: 0.6"
+      ></a-entity>
+      <a-entity
+        light="type: point; color: #55aaff; intensity: 1.2; distance: 10"
+        position="0 2 2"
+      ></a-entity>
+      <a-entity
+        light="type: point; color: #8833ff; intensity: 0.8; distance: 8"
+        position="-2 1 1"
+      ></a-entity>
 
       <!-- Avatar 3D -->
       <a-entity
@@ -56,8 +53,7 @@
       <a-entity camera look-controls wasd-controls>
         <a-cursor color="#99ccff" fuse="true" fuse-timeout="1000"></a-cursor>
       </a-entity>
-
     </a-scene>
-
   </body>
 </html>
+
