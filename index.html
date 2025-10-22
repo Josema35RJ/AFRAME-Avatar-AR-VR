@@ -6,53 +6,65 @@
     <meta name="description" content="Model Viewer (VR / AR) • A-Frame">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <!-- A-Frame base -->
+    <!-- A-Frame core -->
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-
     <!-- Extensiones oficiales -->
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-
-    <!-- AR.js (para fallback sin WebXR) -->
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
   </head>
 
   <body style="margin:0; overflow:hidden; background:#000;">
 
-    <!-- ===================================================== -->
-    <!-- 🟢 ESCENA PRINCIPAL (VR / AR NATIVO WebXR) -->
-    <!-- ===================================================== -->
     <a-scene
       renderer="antialias: true; colorManagement: true;"
       xr-mode-ui="enabled: true"
       background="color: #ECECEC"
       embedded
+      shadow="type: pcfsoft"
       vr-mode-ui="enabled: true">
 
       <!-- Assets -->
       <a-assets timeout="10000">
+        <!-- Modelo -->
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-        <img id="shadow" src="shadow.png">
+        <!-- Texturas del entorno -->
+        <img id="skyTexture" src="https://cdn.aframe.io/a-painter/images/sky.jpg">
+        <img id="groundTexture" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
       </a-assets>
 
       <!-- Luces -->
-      <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-      <a-entity light="type: directional; intensity: 1; position: 0 2 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.6; color: #bdefff"></a-entity>
+      <a-entity light="type: directional; intensity: 1.2; position: 0 3 2; castShadow: true"></a-entity>
+      <a-entity light="type: point; intensity: 0.5; position: 2 4 4; color: #aef"></a-entity>
 
-      <!-- Cámara + cursor VR -->
-      <a-entity id="cameraRig" position="0 1.6 3">
-        <a-camera look-controls wasd-controls>
-          <a-cursor 
-            fuse="true" 
-            fuse-timeout="1000"
-            material="color: white; shader: flat">
-          </a-cursor>
-        </a-camera>
+      <!-- Cámara -->
+      <a-entity id="cameraRig" position="0 1.6 3" movement-controls>
+        <a-camera look-controls wasd-controls position="0 1.6 0"></a-camera>
       </a-entity>
 
-      <!-- Suelo -->
-      <a-plane rotation="-90 0 0" width="10" height="10" color="#999" shadow="receive: true"></a-plane>
+      <!-- 🌅 Entorno tipo playa alienígena -->
+      <a-sky src="#skyTexture" rotation="0 -130 0"></a-sky>
+      <a-plane 
+        src="#groundTexture"
+        rotation="-90 0 0"
+        height="200"
+        width="200"
+        repeat="40 40"
+        color="#88d"
+        material="roughness: 0.9; metalness: 0.1"
+        shadow="receive: true">
+      </a-plane>
 
-      <!-- Avatar -->
+      <!-- 🌊 Elementos ambientales -->
+      <a-entity geometry="primitive: sphere; radius: 60"
+                material="color: #5cf; opacity: 0.05; side: back;"></a-entity>
+      <a-entity light="type: point; color: #88f; intensity: 0.3; position: -3 2 -2"></a-entity>
+      <a-entity geometry="primitive: torus; radius: 8; radius-tubular: 0.1"
+                material="color: #00ffee; opacity: 0.2"
+                rotation="90 0 0"
+                animation="property: rotation; to: 90 360 0; loop: true; dur: 40000; easing: linear">
+      </a-entity>
+
+      <!-- 👤 Avatar con seguimiento de cámara -->
       <a-entity
         gltf-model="#avatarModel"
         position="0 0 -2"
@@ -60,34 +72,16 @@
         rotation="0 180 0"
         look-at="[camera]"
         animation-mixer
-        shadow="cast: true; receive: false">
+        shadow="cast: true; receive: false"
+        animation__float="property: position; dir: alternate; dur: 4000; easing: easeInOutSine; loop: true; to: 0 0.05 -2">
       </a-entity>
 
-    </a-scene>
+      <!-- 🌍 Modo AR avanzado (posición estable + cámara tracking) -->
+      <a-entity 
+        ar-hit-test="target: #avatarModel; type: fixed;"
+        visible="false">
+      </a-entity>
 
-    <!-- ===================================================== -->
-    <!-- 🟡 ESCENA ALTERNATIVA (AR.js - sin WebXR) -->
-    <!-- ===================================================== -->
-    <a-scene
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-      vr-mode-ui="enabled: false"
-      renderer="antialias: true; alpha: true; logarithmicDepthBuffer: true;"
-      device-orientation-permission-ui="enabled: true">
-
-      <!-- Marcador AR.js -->
-      <a-marker preset="hiro">
-        <a-entity
-          gltf-model="#avatarModel"
-          position="0 0 0"
-          rotation="0 180 0"
-          scale="0.5 0.5 0.5"
-          look-at="[camera]"
-          animation-mixer>
-        </a-entity>
-      </a-marker>
-
-      <a-entity camera></a-entity>
     </a-scene>
 
   </body>
