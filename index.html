@@ -1,46 +1,70 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>Pandora AR/VR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <title>A-Frame Avatar AR/VR Mejorado</title>
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
 </head>
-<body style="margin:0; overflow:hidden;">
-  <a-scene xr-mode-ui="enabled: true" renderer="colorManagement: true; physicallyCorrectLights: true;">
-    
-    <!-- Activos -->
-    <a-assets>
-      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-    </a-assets>
+<body>
+    <a-scene
+        xr-mode-ui="XRMode: xr;"
+        embedded
+        renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true;"
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+    >
+        <a-assets timeout="30000">
+            <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+            <!-- HDRI fondo VR -->
+            <img id="skyTexture" src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/equirectangular/royal_esplanade_1k.hdr">
+        </a-assets>
 
-    <!-- Suelo con efecto bioluminiscente -->
-    <a-plane rotation="-90 0 0" width="20" height="20" color="#001a0d" material="shader: standard; emissive: #0ff; emissiveIntensity: 0.2"></a-plane>
+        <!-- Avatar dinámico -->
+        <a-entity id="avatar"
+                  gltf-model="#avatarModel"
+                  scale="0.5 0.5 0.5"
+                  animation-mixer
+                  shadow="cast: true; receive: true"
+                  look-at="[camera]"
+                  visible="false">
+        </a-entity>
 
-    <!-- Luces tipo Pandora -->
-    <a-entity light="type: ambient; color: #66ccff; intensity: 0.5"></a-entity>
-    <a-entity light="type: point; color: #33aaff; intensity: 1.2; distance: 10" position="2 3 2"></a-entity>
-    <a-entity light="type: point; color: #cc33ff; intensity: 0.8; distance: 8" position="-2 2 1"></a-entity>
+        <!-- Hit test para AR -->
+        <a-entity id="hit-test" ar-hit-test></a-entity>
 
-    <!-- Cielo azul-magico -->
-    <a-sky color="#0a2c58"></a-sky>
+        <!-- Cámara -->
+        <a-camera id="camera" position="0 1.6 0" look-controls></a-camera>
 
-    <!-- Avatar -->
-    <a-entity 
-      gltf-model="#avatarModel" 
-      position="0 1.5 -3" 
-      scale="1 1 1" 
-      rotation="0 180 0" 
-      look-at="[camera]" 
-      animation-mixer
-      shadow="cast: true">
-    </a-entity>
+        <!-- Luces -->
+        <a-light type="ambient" color="#cccccc" intensity="0.8"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="1.0" position="-2 4 2"></a-light>
 
-    <!-- Cámara -->
-    <a-entity camera look-controls position="0 1.6 0">
-      <a-cursor color="#99ccff"></a-cursor>
-    </a-entity>
+        <!-- Fondo VR -->
+        <a-sky id="sky" src="#skyTexture" rotation="0 -90 0"></a-sky>
 
-  </a-scene>
+        <!-- Script para AR y ajuste de avatar -->
+        <script>
+            AFRAME.registerComponent('ar-hit-test', {
+                tick: function () {
+                    const avatar = document.querySelector('#avatar');
+                    const cameraEl = document.querySelector('#camera');
+                    const hitTest = this.el.sceneEl.hitTest;
+
+                    if (hitTest && hitTest.visible) {
+                        // Posición sobre el suelo detectado
+                        avatar.object3D.position.copy(hitTest.position);
+                        avatar.visible = true;
+
+                        // Escala automática según la distancia al suelo (más natural)
+                        let distance = cameraEl.object3D.position.distanceTo(hitTest.position);
+                        let scaleFactor = Math.min(Math.max(distance / 4, 0.3), 1.2); // Ajusta mínimo y máximo
+                        avatar.object3D.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+                        // Mirar siempre a la cámara
+                        avatar.object3D.lookAt(cameraEl.object3D.position);
+                    }
+                }
+            });
+        </script>
+    </a-scene>
 </body>
 </html>
