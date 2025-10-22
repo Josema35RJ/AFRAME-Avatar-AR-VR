@@ -1,54 +1,50 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <title>Avatar AR/VR Viewer</title>
-    <meta name="description" content="Escena AR/VR con A-Frame sin JS">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
-  </head>
+<head>
+  <meta charset="utf-8">
+  <title>Avatar AR/VR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+</head>
+<body style="margin:0; overflow:hidden;">
 
-  <body>
-    <!-- Escena principal -->
-    <a-scene
-      xr-mode-ui="enabled: true"
-      vr-mode-ui="enabled: true"
-      ar-mode-ui="enabled: true"
-      renderer="colorManagement: true; physicallyCorrectLights: true;"
-      environment="preset: forest; ground: hills; skyType: gradient; lighting: distant; groundColor: #225533; skyColor: #88ccff; horizonColor: #eef"
-      embedded
-    >
+<a-scene xr-mode-ui="enabled: true" renderer="colorManagement: true; physicallyCorrectLights: true;">
 
-      <!-- Activos -->
-      <a-assets timeout="15000">
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-      </a-assets>
+  <!-- Activos -->
+  <a-assets>
+    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+  </a-assets>
 
-      <!-- Luz principal -->
-      <a-entity light="type: directional; color: #ffffff; intensity: 1.2" position="1 2 2"></a-entity>
-      <a-entity light="type: ambient; color: #cccccc; intensity: 0.6"></a-entity>
+  <!-- Luces estilo cinematográfico -->
+  <a-entity light="type: ambient; color: #88bbff; intensity: 0.5"></a-entity>
+  <a-entity light="type: point; color: #55aaff; intensity: 1.2; distance: 15" position="2 4 2"></a-entity>
+  <a-entity light="type: point; color: #cc33ff; intensity: 0.8; distance: 12" position="-3 2 1"></a-entity>
 
-      <!-- Avatar 3D (mirando siempre a cámara y bien posicionado) -->
-      <a-entity
-        gltf-model="#avatarModel"
-        position="0 1.5 -2"
-        scale="1 1 1"
-        rotation="0 180 0"
-        look-at="[camera]"
-        animation-mixer
-      ></a-entity>
+  <!-- Suelo plano para AR -->
+  <a-plane rotation="-90 0 0" width="20" height="20" color="#0a1f1a" material="shader: standard; emissive: #0ff; emissiveIntensity: 0.1" shadow="receive: true"></a-plane>
 
-      <!-- Cámara con cursor para VR -->
-      <a-entity camera look-controls wasd-controls>
-        <a-cursor
-          color="white"
-          fuse="true"
-          fuse-timeout="1000"
-          raycaster="objects: .clickable"
-        ></a-cursor>
-      </a-entity>
+  <!-- Escenario ficticio para VR: playa / Avatar -->
+  <a-box position="0 0.1 -5" width="10" height="0.2" depth="10" color="#004466"></a-box>
+  <a-sky color="#0a2c58"></a-sky>
 
-    </a-scene>
-  </body>
+  <!-- Avatar 3D -->
+  <a-entity
+    gltf-model="#avatarModel"
+    position="0 1.5 -2"
+    scale="1 1 1"
+    rotation="0 180 0"
+    look-at="[camera]"
+    animation-mixer
+    aframe-extras-movement
+  ></a-entity>
+
+  <!-- Cámara con cursor -->
+  <a-entity camera look-controls wasd-controls position="0 1.6 0">
+    <a-cursor color="#99ccff"></a-cursor>
+  </a-entity>
+
+</a-scene>
+
+</body>
 </html>
