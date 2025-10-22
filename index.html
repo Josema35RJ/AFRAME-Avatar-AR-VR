@@ -1,50 +1,56 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>Avatar AR/VR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <title>A-Frame Avatar AR/VR - SUELO</title>
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 </head>
-<body style="margin:0; overflow:hidden;">
-
-<a-scene xr-mode-ui="enabled: true" renderer="colorManagement: true; physicallyCorrectLights: true;">
-
-  <!-- Activos -->
-  <a-assets>
-    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-  </a-assets>
-
-  <!-- Luces estilo cinematográfico -->
-  <a-entity light="type: ambient; color: #88bbff; intensity: 0.5"></a-entity>
-  <a-entity light="type: point; color: #55aaff; intensity: 1.2; distance: 15" position="2 4 2"></a-entity>
-  <a-entity light="type: point; color: #cc33ff; intensity: 0.8; distance: 12" position="-3 2 1"></a-entity>
-
-  <!-- Suelo plano para AR -->
-  <a-plane rotation="-90 0 0" width="20" height="20" color="#0a1f1a" material="shader: standard; emissive: #0ff; emissiveIntensity: 0.1" shadow="receive: true"></a-plane>
-
-  <!-- Escenario ficticio para VR: playa / Avatar -->
-  <a-box position="0 0.1 -5" width="10" height="0.2" depth="10" color="#004466"></a-box>
-  <a-sky color="#0a2c58"></a-sky>
-
-  <!-- Avatar 3D -->
-  <a-entity
-    gltf-model="#avatarModel"
-    position="0 1.5 -2"
-    scale="1 1 1"
-    rotation="0 180 0"
-    look-at="[camera]"
-    animation-mixer
-    aframe-extras-movement
-  ></a-entity>
-
-  <!-- Cámara con cursor -->
-  <a-entity camera look-controls wasd-controls position="0 1.6 0">
-    <a-cursor color="#99ccff"></a-cursor>
-  </a-entity>
-
-</a-scene>
-
+<body>
+    <a-scene 
+        xr-mode-ui="XRMode: xr;"
+        background="color: #87CEEB">
+        
+        <a-assets timeout="30000">
+            <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+        </a-assets>
+        
+        <!-- SUELO REALISTA -->
+        <a-plane 
+            position="0 0 0"
+            rotation="-90 0 0"
+            width="10" 
+            height="10"
+            color="#90EE90"
+            shadow="receive: true">
+        </a-plane>
+        
+        <!-- AVATAR CORREGIDO - PIES EN SUELO -->
+        <a-entity 
+            gltf-model="#avatarModel"
+            position="0 -0.5 -1.5"      
+            scale="1 1 1"
+            look-at="[camera]"
+            animation-mixer
+            shadow="cast: true; receive: false">
+        </a-entity>
+        
+        <!-- CÁMARA -->
+        <a-camera position="0 1.6 0"></a-camera>
+        
+        <!-- LUCES CORREGIDAS -->
+        <a-light 
+            type="ambient" 
+            color="#B0C4DE" 
+            intensity="0.4">
+        </a-light>
+        
+        <a-light 
+            type="directional" 
+            color="#FFFFFF" 
+            intensity="1.0" 
+            position="2 5 2">
+        </a-light>
+        
+    </a-scene>
 </body>
 </html>
