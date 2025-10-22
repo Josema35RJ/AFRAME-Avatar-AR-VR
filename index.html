@@ -16,14 +16,13 @@
             <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
         </a-assets>
         
-        <!-- Avatar principal -->
+        <!-- Avatar ESTÁTICO (SIN ROTACIÓN) -->
         <a-entity 
             gltf-model="#avatarModel"
             position="0 0 -2"
             scale="0.5 0.5 0.5"
             look-at="[camera]"
             animation-mixer
-            animation="property: object3D.rotation.y; to: 360; loop: true; dur: 10000; easing: linear"
             shadow="cast: true; receive: false">
         </a-entity>
         
@@ -34,22 +33,6 @@
         <a-light type="ambient" color="#404040" intensity="0.8"></a-light>
         <a-light type="directional" color="#FFFFFF" intensity="1.0" position="-1 1 0"></a-light>
         
-        <!-- Botones de AR/VR personalizados (opcional) -->
-        <a-entity id="ar-button" 
-                  geometry="primitive: plane; width: 0.2; height: 0.1" 
-                  material="color: green; opacity: 0.8"
-                  position="-0.5 0.5 -1"
-                  text="value: AR; align: center; color: white; width: 2"
-                  event-set__click="_target: #a-scene; arjs: trackingMethod: best">
-        </a-entity>
-        
-        <a-entity id="vr-button" 
-                  geometry="primitive: plane; width: 0.2; height: 0.1" 
-                  material="color: blue; opacity: 0.8"
-                  position="0.5 0.5 -1"
-                  text="value: VR; align: center; color: white; width: 2"
-                  event-set__click="_target: #a-scene; vr-mode-ui: enabled: true">
-        </a-entity>
     </a-scene>
 </body>
 </html>
