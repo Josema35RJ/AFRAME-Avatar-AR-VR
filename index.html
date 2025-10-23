@@ -1,33 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>A-Frame Avatar AR/VR</title>
+    <title>A-Frame Avatar AR/VR Profesional</title>
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+</head>
 </head>
 <body>
-    <a-scene xr-mode-ui="XRMode: xr;">
+    <a-scene vr-mode-ui="enabled: true">
         
         <a-assets timeout="30000">
             <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
         </a-assets>
         
-        <!-- Avatar ESTÁTICO -->
+        <!-- Avatar PROFESIONAL -->
         <a-entity 
+            id="avatar"
             gltf-model="#avatarModel"
-            position="0 0 -2"
-            scale="0.5 0.5 0.5"
+            position="0 0 -1.5"
+            scale="0.7 0.7 0.7"
             look-at="[camera]"
             animation-mixer
-            shadow="cast: true; receive: false">
+            shadow="cast: true; receive: true">
         </a-entity>
         
         <!-- CÁMARA -->
         <a-camera position="0 1.6 0"></a-camera>
         
-        <!-- LUCES -->
-        <a-light type="ambient" color="#404040" intensity="0.8"></a-light>
-        <a-light type="directional" color="#FFFFFF" intensity="1.0" position="-1 1 0"></a-light>
+        <!-- LUCES PROFESIONALES -->
+        <a-light type="ambient" color="#CCCCCC" intensity="0.6"></a-light>
+        <a-light type="directional" color="#FFFFFF" intensity="1.0" position="1 2 1" castShadow="true"></a-light>
+        
+        <!-- PISO para sombras -->
+        <a-plane rotation="-90 0 0" width="10" height="10" color="#777" shadow="receive: true"></a-plane>
         
     </a-scene>
 </body>
