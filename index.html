@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>A-Frame Avatar AR/VR sin JS</title>
+    <title>A-Frame Avatar AR/VR</title>
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -10,21 +11,14 @@
     embedded
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true;"
->
+xr-mode-ui="XRMode: xr;">
 
     <a-assets>
         <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
     </a-assets>
 
     <!-- Avatar -->
-    <a-entity 
-        gltf-model="#avatarModel"
-        scale="0.5 0.5 0.5"
-        look-at="[camera]"
-        animation-mixer
-        shadow="cast: true; receive: true"
-        position="0 0 -2">
-    </a-entity>
+    <a-entity gltf-model="#avatarModel" scale="1.0 1.0 1.0" look-at="[camera]" animation-mixer shadow="cast: true; receive: true" position="0 0 -1.5"> </a-entity>
 
     <!-- Cámara -->
     <a-camera position="0 1.6 0" look-controls></a-camera>
