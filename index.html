@@ -2,42 +2,101 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Avatar VR / AR Profesional</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Avatar Experiencia XR Profesional</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
   <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
 
+  <style>
+    /* Reset básico */
+    body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+    
+    /* Pantalla de Carga Profesional */
+    #loading-screen {
+      position: absolute;
+      z-index: 9999;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.8s ease-out;
+    }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #0f3460;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .loading-text { color: white; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+  </style>
+
   <script>
-    // 1. Componente para ocultar el entorno virtual al entrar en Realidad Aumentada (cámara passthrough)
-    AFRAME.registerComponent('hide-in-ar', {
+    // 1. Lógica de la Pantalla de Carga
+    AFRAME.registerComponent('loading-manager', {
       init: function () {
-        this.el.sceneEl.addEventListener('enter-vr', () => {
-          if (this.el.sceneEl.is('ar-mode')) {
-            this.el.setAttribute('visible', false);
-          }
-        });
-        this.el.sceneEl.addEventListener('exit-vr', () => {
-          this.el.setAttribute('visible', true);
+        this.el.addEventListener('loaded', () => {
+          const loadingScreen = document.getElementById('loading-screen');
+          loadingScreen.style.opacity = '0';
+          setTimeout(() => loadingScreen.style.display = 'none', 800);
         });
       }
     });
 
-    // 2. Componente autónomo para rotar (1 dedo) y escalar (2 dedos) el avatar
-    AFRAME.registerComponent('touch-gestures', {
+    // 2. Sistema Híbrido: Gestiona qué se ve en VR y qué en AR
+    AFRAME.registerComponent('xr-manager', {
+      init: function () {
+        const scene = this.el.sceneEl;
+        const virtualEnvironment = document.getElementById('virtual-environment');
+        const reticle = document.getElementById('reticle');
+        const avatarWrapper = document.getElementById('avatar-wrapper');
+
+        scene.addEventListener('enter-vr', () => {
+          if (scene.is('ar-mode')) {
+            // Ocultar entorno virtual en AR
+            virtualEnvironment.setAttribute('visible', 'false');
+            // Ocultar avatar hasta que se coloque
+            avatarWrapper.setAttribute('visible', 'false');
+            reticle.setAttribute('visible', 'true');
+          }
+        });
+
+        scene.addEventListener('exit-vr', () => {
+          // Restaurar vista 3D/VR al salir de AR
+          virtualEnvironment.setAttribute('visible', 'true');
+          avatarWrapper.setAttribute('visible', 'true');
+          avatarWrapper.setAttribute('position', '0 0 -2');
+          reticle.setAttribute('visible', 'false');
+        });
+
+        // Colocar avatar en AR al tocar la pantalla
+        reticle.addEventListener('select', () => {
+          if (!scene.is('ar-mode')) return;
+          const pos = reticle.getAttribute('position');
+          avatarWrapper.setAttribute('position', pos);
+          avatarWrapper.setAttribute('visible', 'true');
+        });
+      }
+    });
+
+    // 3. Gestos Inteligentes: Rotar, Escalar y Desactivar Look-At
+    AFRAME.registerComponent('smart-gestures', {
       init: function () {
         let initialDistance = 0;
         let initialScale = this.el.object3D.scale.clone();
         let isDragging = false;
         let previousTouch = null;
+        let lookAtActive = true;
 
         window.addEventListener('touchstart', (e) => {
           if (e.touches.length === 2) {
-            initialDistance = Math.hypot(
-              e.touches[0].pageX - e.touches[1].pageX,
-              e.touches[0].pageY - e.touches[1].pageY
-            );
+            initialDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
             initialScale = this.el.object3D.scale.clone();
           } else if (e.touches.length === 1) {
             isDragging = true;
@@ -47,68 +106,83 @@
 
         window.addEventListener('touchmove', (e) => {
           if (e.touches.length === 2) {
-            // Escalar (Pellizcar / Pinch to zoom)
-            const currentDistance = Math.hypot(
-              e.touches[0].pageX - e.touches[1].pageX,
-              e.touches[0].pageY - e.touches[1].pageY
-            );
+            // Escalar
+            const currentDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
             const scaleFactor = currentDistance / initialDistance;
-            // Limitamos la escala para que no se haga microscópico o gigante
-            const finalScale = Math.max(0.2, Math.min(3.0, initialScale.x * scaleFactor));
+            const finalScale = Math.max(0.5, Math.min(2.5, initialScale.x * scaleFactor));
             this.el.object3D.scale.set(finalScale, finalScale, finalScale);
-            
           } else if (e.touches.length === 1 && isDragging) {
-            // Rotar (Deslizar un dedo / Swipe)
+            // Rotar
             const deltaX = e.touches[0].pageX - previousTouch.pageX;
             this.el.object3D.rotation.y += deltaX * 0.01;
             previousTouch = e.touches[0];
+
+            // Si el usuario rota manualmente, quitamos el look-at para que no rebote
+            if (lookAtActive) {
+              this.el.removeAttribute('look-at');
+              lookAtActive = false;
+            }
           }
         });
 
-        window.addEventListener('touchend', () => {
-          isDragging = false;
-        });
+        window.addEventListener('touchend', () => isDragging = false);
       }
     });
   </script>
-
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
 </head>
 <body>
 
-<a-scene
-  webxr="optionalFeatures: hit-test;"
-  renderer="colorManagement: true; antialias: true; physicallyCorrectLights: true"
-  shadow="type: pcfsoft"
->
-  <a-assets>
-    <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-  </a-assets>
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Cargando Avatar...</div>
+  </div>
 
-  <a-entity camera position="0 1.6 2" look-controls></a-entity>
+  <a-scene
+    xr-manager
+    webxr="optionalFeatures: hit-test;"
+    renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic;"
+    shadow="type: pcfsoft"
+  >
+    <a-assets loading-manager>
+      <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
+      <a-asset-item id="reticleAsset" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/reticle.glb"></a-asset-item>
+    </a-assets>
 
-  <a-light type="directional" intensity="1.2" position="1 4 2" castShadow="true"></a-light>
-  <a-light type="ambient" intensity="0.5" color="#ffffff"></a-light>
+    <a-entity camera position="0 1.6 1.5" look-controls="enabled: false"></a-entity>
 
-  <a-entity hide-in-ar>
-    <a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4" shadow="receive: true"></a-plane>
-    <a-sky color="#ECECEC"></a-sky>
-  </a-entity>
+    <a-light type="directional" intensity="1.5" position="2 4 3" castShadow="true" shadow-mapSize="2048 2048"></a-light>
+    <a-light type="directional" intensity="0.5" position="-2 2 -2" color="#b4c6ef"></a-light>
+    <a-light type="ambient" intensity="0.4" color="#ffffff"></a-light>
 
-  <a-entity
-    id="avatar"
-    gltf-model="#avatarModel"
-    scale="1 1 1"
-    position="0 0 -2"
-    animation-mixer="clip: *; loop: repeat"
-    look-at="[camera]"
-    touch-gestures
-    shadow="cast: true; receive: false"
-  ></a-entity>
+    <a-entity id="virtual-environment">
+      <a-plane rotation="-90 0 0" width="30" height="30" color="#4f5b66" shadow="receive: true"></a-plane>
+      <a-sky color="#1a1a2e"></a-sky>
+    </a-entity>
 
-</a-scene>
+    <a-entity
+      id="reticle"
+      gltf-model="#reticleAsset"
+      scale="0.2 0.2 0.2"
+      ar-hit-test
+      visible="false"
+      shadow="cast: false; receive: false"
+    ></a-entity>
+
+    <a-entity id="avatar-wrapper" position="0 0 -2">
+      <a-entity
+        id="avatar"
+        gltf-model="#avatarModel"
+        scale="1 1 1"
+        animation-mixer="clip: *; loop: repeat"
+        look-at="[camera]"
+        smart-gestures
+        shadow="cast: true; receive: false"
+      ></a-entity>
+      
+      <a-plane rotation="-90 0 0" width="1.5" height="1.5" shadow="receive: true" material="opacity: 0.3; transparent: true; color: #000; depthWrite: false;"></a-plane>
+    </a-entity>
+
+  </a-scene>
 
 </body>
 </html>
