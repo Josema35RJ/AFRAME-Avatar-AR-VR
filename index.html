@@ -8,14 +8,11 @@
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
   <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
-  
   <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
 
   <style>
-    /* Reset básico */
     body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
     
-    /* Pantalla de Carga Profesional */
     #loading-screen {
       position: absolute;
       z-index: 9999;
@@ -40,7 +37,7 @@
   </style>
 
   <script>
-    // 1. Lógica de la Pantalla de Carga
+    // Pantalla de Carga
     AFRAME.registerComponent('loading-manager', {
       init: function () {
         this.el.addEventListener('loaded', () => {
@@ -51,7 +48,7 @@
       }
     });
 
-    // 2. Sistema Híbrido: Gestiona qué se ve en VR/PC y qué en AR (Móvil)
+    // Sistema Híbrido AR/VR
     AFRAME.registerComponent('xr-manager', {
       init: function () {
         const scene = this.el.sceneEl;
@@ -61,33 +58,32 @@
 
         scene.addEventListener('enter-vr', () => {
           if (scene.is('ar-mode')) {
-            // Ocultar el paisaje en AR
             virtualEnvironment.setAttribute('visible', 'false');
-            // Ocultar avatar hasta que se coloque en el suelo real
             avatarWrapper.setAttribute('visible', 'false');
             reticle.setAttribute('visible', 'true');
           }
         });
 
         scene.addEventListener('exit-vr', () => {
-          // Restaurar el paisaje y el avatar al salir de AR
           virtualEnvironment.setAttribute('visible', 'true');
           avatarWrapper.setAttribute('visible', 'true');
           avatarWrapper.setAttribute('position', '0 0 -2');
           reticle.setAttribute('visible', 'false');
         });
 
-        // Colocar avatar en AR al tocar la pantalla
-        reticle.addEventListener('select', () => {
+        // Colocar el avatar en la posición de la retícula
+        scene.addEventListener('select', () => {
           if (!scene.is('ar-mode')) return;
-          const pos = reticle.getAttribute('position');
-          avatarWrapper.setAttribute('position', pos);
-          avatarWrapper.setAttribute('visible', 'true');
+          if (reticle.getAttribute('visible')) {
+            const pos = reticle.getAttribute('position');
+            avatarWrapper.setAttribute('position', pos);
+            avatarWrapper.setAttribute('visible', 'true');
+          }
         });
       }
     });
 
-    // 3. Gestos Inteligentes: Rotar, Escalar y Desactivar Look-At
+    // Gestos Inteligentes
     AFRAME.registerComponent('smart-gestures', {
       init: function () {
         let initialDistance = 0;
@@ -108,18 +104,15 @@
 
         window.addEventListener('touchmove', (e) => {
           if (e.touches.length === 2) {
-            // Escalar
             const currentDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
             const scaleFactor = currentDistance / initialDistance;
             const finalScale = Math.max(0.5, Math.min(2.5, initialScale.x * scaleFactor));
             this.el.object3D.scale.set(finalScale, finalScale, finalScale);
           } else if (e.touches.length === 1 && isDragging) {
-            // Rotar
             const deltaX = e.touches[0].pageX - previousTouch.pageX;
             this.el.object3D.rotation.y += deltaX * 0.01;
             previousTouch = e.touches[0];
 
-            // Desactivar seguimiento facial al rotar manualmente
             if (lookAtActive) {
               this.el.removeAttribute('look-at');
               lookAtActive = false;
@@ -142,12 +135,12 @@
   <a-scene
     xr-manager
     webxr="optionalFeatures: hit-test;"
+    ar-hit-test="target: #reticle;"
     renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic;"
     shadow="type: pcfsoft"
   >
     <a-assets loading-manager>
       <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/3dpea.com_Salute.glb"></a-asset-item>
-      <a-asset-item id="reticleAsset" src="https://cdn.jsdelivr.net/gh/Josema35RJ/Avatar@main/reticle.glb"></a-asset-item>
     </a-assets>
 
     <a-entity camera position="0 1.6 1.5" look-controls="enabled: false"></a-entity>
@@ -161,14 +154,10 @@
       environment="preset: forest; lighting: none; shadow: true;">
     </a-entity>
 
-    <a-entity
-      id="reticle"
-      gltf-model="#reticleAsset"
-      scale="0.2 0.2 0.2"
-      ar-hit-test
-      visible="false"
-      shadow="cast: false; receive: false"
-    ></a-entity>
+    <a-entity id="reticle" visible="false">
+      <a-ring color="#00FFFF" radius-inner="0.1" radius-outer="0.15" rotation="-90 0 0" material="opacity: 0.8; transparent: true;"></a-ring>
+      <a-circle color="#00FFFF" radius="0.03" rotation="-90 0 0" material="opacity: 0.8; transparent: true;"></a-circle>
+    </a-entity>
 
     <a-entity id="avatar-wrapper" position="0 0 -2">
       <a-entity
@@ -180,7 +169,6 @@
         smart-gestures
         shadow="cast: true; receive: false"
       ></a-entity>
-      
       <a-plane rotation="-90 0 0" width="1.5" height="1.5" shadow="receive: true" material="opacity: 0.3; transparent: true; color: #000; depthWrite: false;"></a-plane>
     </a-entity>
 
